@@ -1,0 +1,84 @@
+# Sprint Status - bmad-freelancer-tracking-demo-application-v6
+# Generated: 2026-03-11
+# Project: bmad-freelancer-tracking-demo-application-v6
+# Project Key: NOKEY
+# Tracking System: file-system
+# Story Location: _bmad-output/implementation-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Epic Status Transitions:
+#   - backlog → in-progress: Automatically when first story is created (via create-story)
+#   - in-progress → done: Manually when all stories reach 'done' status
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created in stories folder
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review (via Dev's code-review workflow)
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
+# - SM typically creates next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+
+generated: 2026-03-11
+project: bmad-freelancer-tracking-demo-application-v6
+project_key: NOKEY
+tracking_system: file-system
+story_location: _bmad-output/implementation-artifacts
+
+development_status:
+  # Epic 1: Foundation & Core Kanban
+  epic-1: backlog
+  1-1-initialize-project-with-vite-react-ts-template: backlog
+  1-2-add-tailwind-shadcn-ui-pwa-and-path-aliases: backlog
+  1-3-set-up-local-data-storage-and-base-layout: backlog
+  1-4-create-kanban-board-with-customizable-columns: backlog
+  1-5-create-and-manage-tasks-with-full-fields: backlog
+  1-6-move-and-reorder-tasks-via-drag-and-drop: backlog
+  1-7-add-subtasks-and-quick-add-for-tasks: backlog
+  epic-1-retrospective: optional
+
+  # Epic 2: Time Tracking
+  epic-2: backlog
+  2-1-add-timer-button-to-task-cards: backlog
+  2-2-display-elapsed-and-total-time-on-task-cards: backlog
+  2-3-implement-task-detail-side-panel: backlog
+  2-4-add-manual-time-entry-and-editing: backlog
+  2-5-add-time-estimates-and-estimated-vs-actual-display: backlog
+  2-6-enable-timer-to-run-when-tab-is-inactive: backlog
+  epic-2-retrospective: optional
+
+  # Epic 3: Client/Project Organization & Revenue
+  epic-3: backlog
+  3-1-create-and-manage-clients: backlog
+  3-2-create-and-manage-projects: backlog
+  3-3-assign-tasks-to-clients-and-projects: backlog
+  3-4-add-inline-client-and-project-creation: backlog
+  3-5-add-billable-toggle-and-hourly-rates: backlog
+  3-6-display-revenue-on-task-cards: backlog
+  3-7-create-revenue-dashboard: backlog
+  epic-3-retrospective: optional
+
+  # Epic 4: Data Management & Polish
+  epic-4: backlog
+  4-1-add-search-and-filter: backlog
+  4-2-add-data-export-csv-and-json: backlog
+  4-3-add-backup-and-restore: backlog
+  4-4-add-settings-panel-dark-mode-defaults-shortcuts: backlog
+  4-5-add-onboarding-wizard: backlog
+  4-6-add-restart-onboarding-from-settings: backlog
+  epic-4-retrospective: optional
