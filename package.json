@@ -7,7 +7,15 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:debug": "playwright test --debug",
+    "test:pact:consumer": "vitest run --config vitest.config.pact.ts",
+    "publish:pact": ". ./scripts/env-setup.sh && ./scripts/publish-pact.sh",
+    "can:i:deploy:consumer": ". ./scripts/env-setup.sh && PACTICIPANT=FreelancerTrackingApp ./scripts/can-i-deploy.sh",
+    "record:consumer:deployment": ". ./scripts/env-setup.sh && PACTICIPANT=FreelancerTrackingApp ./scripts/record-deployment.sh"
   },
   "dependencies": {
     "clsx": "^2.1.1",
@@ -17,6 +25,9 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
+    "@faker-js/faker": "^10.3.0",
+    "@playwright/test": "^1.58.2",
+    "@seontechnologies/playwright-utils": "^3.14.0",
     "@tailwindcss/postcss": "^4.2.1",
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.7",
