@@ -4,6 +4,6 @@
 # Date: 2026-03-11T08:07:28.900Z
 
 user_name: Marlon
-communication_language: Portuguese
-document_output_language: Portuguese
+communication_language: English
+document_output_language: English
 output_folder: "{project-root}/_bmad-output"
