@@ -12,7 +12,9 @@ interface AppContextType {
   updateTask: (id: number, updates: Partial<Task>) => Promise<void>;
   deleteTask: (id: number) => Promise<void>;
   addColumn: (column: Omit<Column, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  updateColumn: (id: number, updates: Partial<Column>) => Promise<void>;
   deleteColumn: (id: number) => Promise<void>;
+  reorderColumns: (columns: Column[]) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -121,8 +123,43 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
     }
   };
 
+  const updateColumn = async (id: number, updates: Partial<Column>) => {
+    try {
+      const updateWithTimestamp = {
+        ...updates,
+        updatedAt: getCurrentTimestamp(),
+      };
+      
+      await db.columns.update(id, updateWithTimestamp);
+      setColumns(columns.map(c => c.id === id ? { ...c, ...updateWithTimestamp } : c));
+    } catch (error) {
+      console.error('Failed to update column:', error);
+      throw error;
+    }
+  };
+
+  const reorderColumns = async (newColumns: Column[]) => {
+    try {
+      const now = getCurrentTimestamp();
+      const updates = newColumns.map((col, idx) => ({
+        ...col,
+        order: idx,
+        updatedAt: now,
+      }));
+      
+      await Promise.all(
+        updates.map(col => db.columns.update(col.id!, { order: col.order, updatedAt: col.updatedAt }))
+      );
+      
+      setColumns(updates);
+    } catch (error) {
+      console.error('Failed to reorder columns:', error);
+      throw error;
+    }
+  };
+
   return (
-    <AppContext.Provider value={{ tasks, columns, isLoading, addTask, updateTask, deleteTask, addColumn, deleteColumn }}>
+    <AppContext.Provider value={{ tasks, columns, isLoading, addTask, updateTask, deleteTask, addColumn, updateColumn, deleteColumn, reorderColumns }}>
       {children}
     </AppContext.Provider>
   );
