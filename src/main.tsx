@@ -11,13 +11,21 @@ if (import.meta.env.DEV) {
   (window as any).__db__ = db;
 }
 
-// Register service worker for PWA functionality
+// Register service worker for PWA functionality with error handling
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(err => {
-      console.warn('Service Worker registration failed:', err)
-    })
-  })
+    navigator.serviceWorker
+      .register('/sw.js')
+      .then((registration) => {
+        if (import.meta.env.DEV) {
+          console.log('Service Worker registered successfully:', registration);
+        }
+      })
+      .catch((err) => {
+        console.error('Service Worker registration failed:', err);
+        // Note: App continues to work offline-first with IndexedDB even if SW fails
+      });
+  });
 }
 
 createRoot(document.getElementById('root')!).render(
