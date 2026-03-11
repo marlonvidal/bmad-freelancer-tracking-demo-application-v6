@@ -42,6 +42,7 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,wasm}'],
+        globIgnores: ['**/create-icons.cjs', '**/scripts/**'],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/.*\.(?:ttf|woff|woff2|css|png|jpg|jpeg|svg|gif|webp)$/,
