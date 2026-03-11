@@ -3,6 +3,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useApp } from '@/context/AppContext';
 import type { Column } from '@/db';
+import ColumnContent from './ColumnContent';
 import { Button } from '@/components/ui/button';
 import { Trash2 } from 'lucide-react';
 
@@ -122,8 +123,8 @@ export default function ColumnHeader({ column }: ColumnHeaderProps) {
           <Trash2 className="w-4 h-4 text-red-500" />
         </Button>
       </div>
-      <div className="text-gray-500 text-sm">
-        + Add task
+      <div className="flex-1 overflow-y-auto">
+        <ColumnContent column={column} />
       </div>
     </div>
   );

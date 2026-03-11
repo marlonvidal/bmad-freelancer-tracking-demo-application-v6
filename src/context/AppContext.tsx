@@ -2,12 +2,14 @@ import { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode, FC } from 'react';
 import type { Task, Column } from '@/db';
 import { db } from '@/db';
-import { TaskSchema, ColumnSchema } from '@/db/validation';
+import { TaskSchema, TaskFormSchema, ColumnSchema } from '@/db/validation';
+import type { TaskFormData } from '@/db/validation';
 
 interface AppContextType {
   tasks: Task[];
   columns: Column[];
   isLoading: boolean;
+  createTask: (columnId: number, data: TaskFormData) => Promise<Task>;
   addTask: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
   updateTask: (id: number, updates: Partial<Task>) => Promise<void>;
   deleteTask: (id: number) => Promise<void>;
@@ -45,6 +47,33 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
     };
     loadData();
   }, []);
+
+  const createTask = async (columnId: number, data: TaskFormData): Promise<Task> => {
+    try {
+      // Validate form data
+      const validData = TaskFormSchema.parse(data);
+      
+      const now = getCurrentTimestamp();
+      const taskData: Omit<Task, 'id'> = {
+        ...validData,
+        columnId,
+        completed: false,
+        createdAt: now,
+        updatedAt: now,
+      };
+      
+      // Validate full task before persistence
+      const validatedTask = TaskSchema.parse(taskData);
+      
+      const id = await db.tasks.add(validatedTask);
+      const newTask: Task = { ...validatedTask, id };
+      setTasks([...tasks, newTask]);
+      return newTask;
+    } catch (error: any) {
+      console.error('Failed to create task:', error);
+      throw new Error(error.message || 'Failed to create task');
+    }
+  };
 
   const addTask = async (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
@@ -159,7 +188,7 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
   };
 
   return (
-    <AppContext.Provider value={{ tasks, columns, isLoading, addTask, updateTask, deleteTask, addColumn, updateColumn, deleteColumn, reorderColumns }}>
+    <AppContext.Provider value={{ tasks, columns, isLoading, createTask, addTask, updateTask, deleteTask, addColumn, updateColumn, deleteColumn, reorderColumns }}>
       {children}
     </AppContext.Provider>
   );

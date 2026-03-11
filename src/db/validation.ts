@@ -8,9 +8,10 @@ export const TaskSchema = z.object({
   title: z.string().min(1, 'Task title is required').max(255, 'Task title must be under 255 characters'),
   description: z.string().max(2000, 'Task description must be under 2000 characters').optional(),
   columnId: z.number().positive('Column ID must be positive'),
-  dueDate: z.string().datetime().optional(),
-  priority: z.enum(['low', 'medium', 'high']).optional(),
+  dueDate: z.string().optional(),
+  priority: z.enum(['Low', 'Medium', 'High', 'Urgent']).default('Medium'),
   tags: z.array(z.string()).optional(),
+  completed: z.boolean().default(false),
   clientId: z.number().positive().optional(),
   projectId: z.number().positive().optional(),
   billable: z.boolean().optional(),
@@ -18,6 +19,14 @@ export const TaskSchema = z.object({
   timeEstimate: z.number().positive('Time estimate must be positive').optional(),
   createdAt: ISODateSchema,
   updatedAt: ISODateSchema,
+});
+
+// Form validation schema (excludes id, createdAt, updatedAt, completed)
+export const TaskFormSchema = TaskSchema.omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  completed: true,
 });
 
 export const ColumnSchema = z.object({
@@ -64,6 +73,7 @@ export const SettingsSchema = z.object({
 });
 
 export type ValidatedTask = z.infer<typeof TaskSchema>;
+export type TaskFormData = z.infer<typeof TaskFormSchema>;
 export type ValidatedColumn = z.infer<typeof ColumnSchema>;
 export type ValidatedClient = z.infer<typeof ClientSchema>;
 export type ValidatedProject = z.infer<typeof ProjectSchema>;

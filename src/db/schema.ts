@@ -8,8 +8,9 @@ export interface Task {
   description?: string;
   columnId: number;
   dueDate?: string;
-  priority?: 'low' | 'medium' | 'high';
+  priority: 'Low' | 'Medium' | 'High' | 'Urgent';
   tags?: string[];
+  completed: boolean;
   clientId?: number;
   projectId?: number;
   billable?: boolean;
