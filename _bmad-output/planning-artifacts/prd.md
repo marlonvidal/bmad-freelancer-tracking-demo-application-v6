@@ -10,7 +10,7 @@ classification:
   projectType: web_app
   domain: general
   complexity: low
-  projectContext: greenfield
+  projectContext: brownfield
 ---
 
 # Product Requirements Document - bmad-freelancer-tracking-demo-application-v6

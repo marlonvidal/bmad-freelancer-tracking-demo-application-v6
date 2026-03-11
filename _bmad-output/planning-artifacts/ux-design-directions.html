@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UX Design Directions - Freelancer Kanban + Timer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', system-ui, sans-serif; background: #1a1a2e; color: #eee; min-height: 100vh; }
+    .nav { position: fixed; top: 0; left: 0; right: 0; background: rgba(0,0,0,0.8); padding: 12px 24px; display: flex; gap: 8px; flex-wrap: wrap; z-index: 100; }
+    .nav a { color: #60a5fa; text-decoration: none; padding: 6px 12px; border-radius: 6px; font-size: 14px; }
+    .nav a:hover { background: rgba(96,165,250,0.2); }
+    .nav a.active { background: #60a5fa; color: #000; }
+    .direction { min-height: 100vh; padding: 80px 24px 48px; }
+    .direction h2 { font-size: 24px; margin-bottom: 8px; }
+    .direction .tagline { font-size: 14px; opacity: 0.8; margin-bottom: 24px; }
+    .board { display: flex; gap: 16px; overflow-x: auto; padding-bottom: 16px; min-height: 400px; }
+    .column { min-width: 280px; background: rgba(255,255,255,0.05); border-radius: 12px; padding: 16px; }
+    .column h3 { font-size: 14px; font-weight: 600; margin-bottom: 12px; opacity: 0.9; }
+    .card { background: rgba(255,255,255,0.08); border-radius: 8px; padding: 12px; margin-bottom: 12px; cursor: pointer; transition: transform 0.2s; }
+    .card:hover { transform: translateY(-2px); }
+    .card-title { font-weight: 600; font-size: 14px; margin-bottom: 8px; }
+    .card-meta { font-size: 12px; opacity: 0.7; display: flex; gap: 12px; flex-wrap: wrap; }
+    .card-timer { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 13px; }
+    .timer-btn { width: 28px; height: 28px; border-radius: 50%; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+    .timer-active { animation: pulse 2s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+    .revenue { font-weight: 600; font-size: 12px; }
+    .billable { font-size: 11px; padding: 2px 6px; border-radius: 4px; }
+
+    /* Direction 1: Minimal Light */
+    .d1 { background: #f8fafc; color: #1e293b; }
+    .d1 .column { background: #fff; border: 1px solid #e2e8f0; }
+    .d1 .card { background: #fff; border: 1px solid #e2e8f0; }
+    .d1 .timer-btn { background: #22c55e; color: #fff; }
+    .d1 .timer-active { background: #22c55e; }
+    .d1 .revenue { color: #16a34a; }
+    .d1 .billable { background: #dcfce7; color: #166534; }
+
+    /* Direction 2: Dark Focus */
+    .d2 { background: #0f172a; color: #f1f5f9; }
+    .d2 .column { background: #1e293b; }
+    .d2 .card { background: #334155; }
+    .d2 .timer-btn { background: #3b82f6; color: #fff; }
+    .d2 .timer-active { background: #3b82f6; box-shadow: 0 0 12px rgba(59,130,246,0.5); }
+    .d2 .revenue { color: #4ade80; }
+    .d2 .billable { background: rgba(74,222,128,0.2); color: #4ade80; }
+
+    /* Direction 3: Dense Professional */
+    .d3 { background: #1e293b; color: #e2e8f0; }
+    .d3 .column { background: #334155; padding: 12px; }
+    .d3 .card { padding: 10px; margin-bottom: 8px; }
+    .d3 .card-title { font-size: 13px; }
+    .d3 .card-meta { font-size: 11px; }
+    .d3 .timer-btn { width: 24px; height: 24px; font-size: 10px; }
+    .d3 .timer-btn { background: #64748b; color: #fff; }
+    .d3 .timer-active { background: #0ea5e9; }
+    .d3 .revenue { font-size: 11px; color: #38bdf8; }
+
+    /* Direction 4: Spacious Calm */
+    .d4 { background: #f8fafc; color: #334155; }
+    .d4 .column { background: #fff; border: 1px solid #e2e8f0; padding: 24px; }
+    .d4 .card { padding: 20px; margin-bottom: 16px; background: #f8fafc; border-radius: 12px; }
+    .d4 .card-title { font-size: 16px; }
+    .d4 .timer-btn { font-size: 14px; width: 36px; height: 36px; background: #0ea5e9; color: #fff; }
+    .d4 .revenue { font-size: 14px; color: #0284c7; }
+
+    /* Direction 5: Accent Bold */
+    .d5 { background: #0c0a09; color: #fafaf9; }
+    .d5 .column { background: #1c1917; border: 1px solid #292524; }
+    .d5 .card { background: #292524; border-left: 4px solid #f59e0b; }
+    .d5 .timer-btn { background: #f59e0b; color: #000; }
+    .d5 .timer-active { background: #f59e0b; box-shadow: 0 0 16px rgba(245,158,11,0.6); }
+    .d5 .revenue { color: #fbbf24; font-size: 14px; }
+    .d5 .billable { background: rgba(245,158,11,0.2); color: #fbbf24; }
+
+    /* Direction 6: Muted Subtle */
+    .d6 { background: #f8fafc; color: #475569; }
+    .d6 .column { background: #f1f5f9; }
+    .d6 .card { background: #fff; border: 1px solid #e2e8f0; }
+    .d6 .timer-btn { background: #94a3b8; color: #fff; }
+    .d6 .timer-active { background: #64748b; }
+    .d6 .revenue { color: #64748b; font-weight: 500; }
+    .d6 .billable { background: #f1f5f9; color: #64748b; }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <a href="#d1">1. Minimal Light</a>
+    <a href="#d2">2. Dark Focus</a>
+    <a href="#d3">3. Dense Professional</a>
+    <a href="#d4">4. Spacious Calm</a>
+    <a href="#d5">5. Accent Bold</a>
+    <a href="#d6">6. Muted Subtle</a>
+  </nav>
+
+  <section id="d1" class="direction d1">
+    <h2>Direction 1: Minimal Light</h2>
+    <p class="tagline">Trello-inspired, clean, light backgrounds. Familiar and approachable.</p>
+    <div class="board">
+      <div class="column">
+        <h3>Backlog</h3>
+        <div class="card">
+          <div class="card-title">Design homepage mockups</div>
+          <div class="card-meta">Acme Corp · Website Redesign</div>
+          <div class="card-timer">
+            <button class="timer-btn timer-active">▶</button>
+            <span>1:24:32</span>
+            <span class="revenue">$119.68</span>
+          </div>
+          <span class="billable">Billable</span>
+        </div>
+        <div class="card">
+          <div class="card-title">Content audit</div>
+          <div class="card-meta">Acme Corp · Website Redesign</div>
+          <div class="card-timer">
+            <button class="timer-btn">▶</button>
+            <span>1:15:00</span>
+            <span class="revenue">$106.25</span>
+          </div>
+          <span class="billable">Billable</span>
+        </div>
+      </div>
+      <div class="column">
+        <h3>In Progress</h3>
+        <div class="card">
+          <div class="card-title">API integration</div>
+          <div class="card-meta">Beta Inc · Mobile App</div>
+          <div class="card-timer">
+            <button class="timer-btn">▶</button>
+            <span>0:45:00</span>
+            <span class="revenue">—</span>
+          </div>
+          <span style="font-size:11px;opacity:0.7">Non-billable</span>
+        </div>
+      </div>
+      <div class="column">
+        <h3>Review</h3>
+      </div>
+      <div class="column">
+        <h3>Done</h3>
+      </div>
+    </div>
+  </section>
+
+  <section id="d2" class="direction d2">
+    <h2>Direction 2: Dark Focus</h2>
+    <p class="tagline">Dark mode, timer-centric with accent glow. Optimized for long sessions.</p>
+    <div class="board">
+      <div class="column">
+        <h3>Backlog</h3>
+        <div class="card">
+          <div class="card-title">Design homepage mockups</div>
+          <div class="card-meta">Acme Corp · Website Redesign</div>
+          <div class="card-timer">
+            <button class="timer-btn timer-active">⏸</button>
+            <span>1:24:32</span>
+            <span class="revenue">$119.68</span>
+          </div>
+          <span class="billable">Billable</span>
+        </div>
+        <div class="card">
+          <div class="card-title">Content audit</div>
+          <div class="card-meta">Acme Corp · Website Redesign</div>
+          <div class="card-timer">
+            <button class="timer-btn">▶</button>
+            <span>1:15:00</span>
+            <span class="revenue">$106.25</span>
+          </div>
+          <span class="billable">Billable</span>
+        </div>
+      </div>
+      <div class="column">
+        <h3>In Progress</h3>
+        <div class="card">
+          <div class="card-title">API integration</div>
+          <div class="card-meta">Beta Inc · Mobile App</div>
+          <div class="card-timer">
+            <button class="timer-btn">▶</button>
+            <span>0:45:00</span>
+            <span class="revenue">—</span>
+          </div>
+        </div>
+      </div>
+      <div class="column"><h3>Review</h3></div>
+      <div class="column"><h3>Done</h3></div>
+    </div>
+  </section>
+
+  <section id="d3" class="direction d3">
+    <h2>Direction 3: Dense Professional</h2>
+    <p class="tagline">Compact layout, more cards visible. Information-dense for power users.</p>
+    <div class="board">
+      <div class="column">
+        <h3>Backlog</h3>
+        <div class="card">
+          <div class="card-title">Design homepage mockups</div>
+          <div class="card-meta">Acme · Website Redesign</div>
+          <div class="card-timer">
+            <button class="timer-btn timer-active">▶</button>
+            <span>1:24:32</span>
+            <span class="revenue">$119.68</span>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Content audit</div>
+          <div class="card-meta">Acme · Website Redesign</div>
+          <div class="card-timer">
+            <button class="timer-btn">▶</button>
+            <span>1:15:00</span>
+            <span class="revenue">$106.25</span>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Wireframes v2</div>
+          <div class="card-meta">Beta Inc · Mobile App</div>
+          <div class="card-timer">
+            <button class="timer-btn">▶</button>
+            <span>0:30:00</span>
+            <span class="revenue">$42.50</span>
+          </div>
+        </div>
+      </div>
+      <div class="column">
+        <h3>In Progress</h3>
+        <div class="card">
+          <div class="card-title">API integration</div>
+          <div class="card-meta">Beta Inc · Mobile App</div>
+          <div class="card-timer">
+            <button class="timer-btn">▶</button>
+            <span>0:45:00</span>
+            <span class="revenue">—</span>
+          </div>
+        </div>
+      </div>
+      <div class="column"><h3>Review</h3></div>
+      <div class="column"><h3>Done</h3></div>
+    </div>
+  </section>
+
+  <section id="d4" class="direction d4">
+    <h2>Direction 4: Spacious Calm</h2>
+    <p class="tagline">Generous whitespace, relaxed density. Reduces cognitive load.</p>
+    <div class="board">
+      <div class="column">
+        <h3>Backlog</h3>
+        <div class="card">
+          <div class="card-title">Design homepage mockups</div>
+          <div class="card-meta">Acme Corp · Website Redesign</div>
+          <div class="card-timer">
+            <button class="timer-btn timer-active">⏸</button>
+            <span>1:24:32</span>
+            <span class="revenue">$119.68</span>
+          </div>
+          <span class="billable">Billable</span>
+        </div>
+        <div class="card">
+          <div class="card-title">Content audit</div>
+          <div class="card-meta">Acme Corp · Website Redesign</div>
+          <div class="card-timer">
+            <button class="timer-btn">▶</button>
+            <span>1:15:00</span>
+            <span class="revenue">$106.25</span>
+          </div>
+          <span class="billable">Billable</span>
+        </div>
+      </div>
+      <div class="column">
+        <h3>In Progress</h3>
+        <div class="card">
+          <div class="card-title">API integration</div>
+          <div class="card-meta">Beta Inc · Mobile App</div>
+          <div class="card-timer">
+            <button class="timer-btn">▶</button>
+            <span>0:45:00</span>
+            <span class="revenue">—</span>
+          </div>
+        </div>
+      </div>
+      <div class="column"><h3>Review</h3></div>
+      <div class="column"><h3>Done</h3></div>
+    </div>
+  </section>
+
+  <section id="d5" class="direction d5">
+    <h2>Direction 5: Accent Bold</h2>
+    <p class="tagline">Strong accent color for timer and revenue. High visibility, energetic.</p>
+    <div class="board">
+      <div class="column">
+        <h3>Backlog</h3>
+        <div class="card">
+          <div class="card-title">Design homepage mockups</div>
+          <div class="card-meta">Acme Corp · Website Redesign</div>
+          <div class="card-timer">
+            <button class="timer-btn timer-active">⏸</button>
+            <span>1:24:32</span>
+            <span class="revenue">$119.68</span>
+          </div>
+          <span class="billable">Billable</span>
+        </div>
+        <div class="card">
+          <div class="card-title">Content audit</div>
+          <div class="card-meta">Acme Corp · Website Redesign</div>
+          <div class="card-timer">
+            <button class="timer-btn">▶</button>
+            <span>1:15:00</span>
+            <span class="revenue">$106.25</span>
+          </div>
+          <span class="billable">Billable</span>
+        </div>
+      </div>
+      <div class="column">
+        <h3>In Progress</h3>
+        <div class="card">
+          <div class="card-title">API integration</div>
+          <div class="card-meta">Beta Inc · Mobile App</div>
+          <div class="card-timer">
+            <button class="timer-btn">▶</button>
+            <span>0:45:00</span>
+            <span class="revenue">—</span>
+          </div>
+        </div>
+      </div>
+      <div class="column"><h3>Review</h3></div>
+      <div class="column"><h3>Done</h3></div>
+    </div>
+  </section>
+
+  <section id="d6" class="direction d6">
+    <h2>Direction 6: Muted Subtle</h2>
+    <p class="tagline">Soft colors, understated. Calm and professional without distraction.</p>
+    <div class="board">
+      <div class="column">
+        <h3>Backlog</h3>
+        <div class="card">
+          <div class="card-title">Design homepage mockups</div>
+          <div class="card-meta">Acme Corp · Website Redesign</div>
+          <div class="card-timer">
+            <button class="timer-btn timer-active">▶</button>
+            <span>1:24:32</span>
+            <span class="revenue">$119.68</span>
+          </div>
+          <span class="billable">Billable</span>
+        </div>
+        <div class="card">
+          <div class="card-title">Content audit</div>
+          <div class="card-meta">Acme Corp · Website Redesign</div>
+          <div class="card-timer">
+            <button class="timer-btn">▶</button>
+            <span>1:15:00</span>
+            <span class="revenue">$106.25</span>
+          </div>
+          <span class="billable">Billable</span>
+        </div>
+      </div>
+      <div class="column">
+        <h3>In Progress</h3>
+        <div class="card">
+          <div class="card-title">API integration</div>
+          <div class="card-meta">Beta Inc · Mobile App</div>
+          <div class="card-timer">
+            <button class="timer-btn">▶</button>
+            <span>0:45:00</span>
+            <span class="revenue">—</span>
+          </div>
+        </div>
+      </div>
+      <div class="column"><h3>Review</h3></div>
+      <div class="column"><h3>Done</h3></div>
+    </div>
+  </section>
+</body>
+</html>
