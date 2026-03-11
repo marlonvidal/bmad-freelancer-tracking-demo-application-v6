@@ -53,34 +53,49 @@ Key variables:
 
 ```
 tests/
-├── e2e/                          # Playwright E2E tests
-│   ├── app-shell.spec.ts         # App shell / navigation tests
-│   └── task-management.spec.ts   # Task management tests
+├── e2e/                              # Playwright E2E tests
+│   ├── app-shell.spec.ts             # App shell / navigation tests
+│   ├── task-management.spec.ts       # Data layer tests (localStorage)
+│   ├── kanban-board.spec.ts          # Kanban board tests (story 1.4 — skipped until implemented)
+│   ├── task-crud.spec.ts             # Task CRUD tests (story 1.5 — skipped until implemented)
+│   └── navigation.spec.ts            # Navigation & persistence (story 1.3 — skipped until implemented)
 │
 ├── support/
 │   ├── fixtures/
-│   │   ├── merged-fixtures.ts    # ⭐ Single test object — import this in all tests
-│   │   └── custom-fixtures.ts    # Project-specific fixtures (task, freelancer)
+│   │   ├── merged-fixtures.ts        # ⭐ Single test object — import this in all tests
+│   │   └── custom-fixtures.ts        # Project-specific fixtures (task, urgentTask, freelancer)
 │   │
 │   ├── factories/
-│   │   ├── task-factory.ts       # Task data factory (faker-based)
-│   │   ├── freelancer-factory.ts # Freelancer data factory
-│   │   └── index.ts              # Re-exports all factories
+│   │   ├── task-factory.ts           # Task data factory (faker-based)
+│   │   ├── freelancer-factory.ts     # Freelancer data factory
+│   │   └── index.ts                  # Re-exports all factories
 │   │
 │   ├── helpers/
-│   │   └── local-storage.ts      # localStorage seeding helpers
+│   │   └── local-storage.ts          # localStorage seeding helpers
 │   │
 │   └── page-objects/
-│       └── app-page.ts           # Page Object for main app page
+│       ├── app-page.ts               # Page Object for main app page
+│       ├── board-page.ts             # Page Object for Kanban board (story 1.4)
+│       └── task-form-page.ts         # Page Object for task create/edit form (story 1.5)
 │
-└── contract/                     # Pact consumer contract tests
+└── contract/                         # Pact consumer contract tests
     ├── consumer/
-    │   └── get-tasks.pacttest.ts # Tasks API contract
+    │   └── get-tasks.pacttest.ts     # Tasks API contract
     └── support/
-        ├── pact-config.ts        # PactV4 factory
-        ├── provider-states.ts    # Provider state factories
-        └── consumer-helpers.ts   # Local pactjs-utils shim
+        ├── pact-config.ts            # PactV4 factory
+        ├── provider-states.ts        # Provider state factories
+        └── consumer-helpers.ts       # Local pactjs-utils shim
 ```
+
+### Test Status by Story
+
+| File | Status | Story |
+|------|--------|-------|
+| `app-shell.spec.ts` | ✅ Active (9 tests) | Stories 1.1–1.2 |
+| `task-management.spec.ts` | ✅ Active (8 tests) | Data layer foundation |
+| `kanban-board.spec.ts` | ⏸ Skipped (7 tests) | Story 1.4 — remove `test.skip` when implemented |
+| `task-crud.spec.ts` | ⏸ Skipped (9 tests) | Story 1.5 — remove `test.skip` when implemented |
+| `navigation.spec.ts` | ⏸ Skipped (9 tests) | Story 1.3 — remove `test.skip` when implemented |
 
 ---
 
