@@ -47,7 +47,7 @@ development_status:
   1-2-add-tailwind-shadcn-ui-pwa-and-path-aliases: done
   1-3-set-up-local-data-storage-and-base-layout: done
   1-4-create-kanban-board-with-customizable-columns: done
-  1-5-create-and-manage-tasks-with-full-fields: review
+  1-5-create-and-manage-tasks-with-full-fields: done
   1-6-move-and-reorder-tasks-via-drag-and-drop: ready-for-dev
   1-7-add-subtasks-and-quick-add-for-tasks: ready-for-dev
   epic-1-retrospective: optional
