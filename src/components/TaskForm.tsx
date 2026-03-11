@@ -48,7 +48,7 @@ export default function TaskForm({
           description: initialData.description || '',
           columnId: initialData.columnId,
           priority: initialData.priority,
-          tags: initialData.tags || [],
+          tags: initialData.tags ? [...initialData.tags] : [],
           dueDate: initialData.dueDate || '',
         }
       : {
@@ -75,11 +75,12 @@ export default function TaskForm({
         
         console.error('Validation error:', validationErr);
         
-        // Handle Zod ZodError
-        if (Array.isArray(validationErr?.errors)) {
+        // Handle Zod ZodError with proper type checking
+        if (validationErr?.errors && Array.isArray(validationErr.errors)) {
           validationErr.errors.forEach((e: any) => {
             const fieldName = String(e.path?.[0] || 'form');
-            newErrors[fieldName] = String(e.message || 'Invalid field');
+            const message = String(e.message || 'Invalid field');
+            newErrors[fieldName] = message;
           });
         } else if (validationErr?.message) {
           newErrors.submit = String(validationErr.message);

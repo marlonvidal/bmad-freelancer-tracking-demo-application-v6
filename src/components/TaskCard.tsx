@@ -40,20 +40,25 @@ export default function TaskCard({ task, onTaskUpdated }: TaskCardProps) {
     }
   };
 
-  const isOverdue =
-    task.dueDate && new Date(task.dueDate + 'T00:00:00') < new Date();
-  const dueDateClass = isOverdue
+  const isOverdue = () => {
+    if (!task.dueDate) return false;
+    const taskDate = new Date(task.dueDate + 'T00:00:00');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return taskDate < today;
+  };
+  const dueDateClass = isOverdue()
     ? 'text-red-600 font-semibold bg-red-50 px-2 py-1 rounded'
     : 'text-gray-500';
 
   return (
     <>
-      <div className="bg-white border border-gray-200 rounded-lg p-5 mb-3 shadow-sm hover:shadow-md transition-shadow group">
+      <div className="bg-white border border-gray-200 rounded-lg p-5 mb-3 shadow-sm hover:shadow-md transition-shadow">
         <div className="flex items-start justify-between gap-2 mb-2">
           <h3 className="text-base font-semibold flex-1 text-gray-900">
             {task.title}
           </h3>
-          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="flex gap-1">
             <Button
               variant="ghost"
               size="sm"
@@ -102,7 +107,7 @@ export default function TaskCard({ task, onTaskUpdated }: TaskCardProps) {
             )}
           </div>
 
-          {task.tags && task.tags.length > 0 && (
+          {task.tags && Array.isArray(task.tags) && task.tags.length > 0 && (
             <div className="flex gap-1 flex-wrap">
               {task.tags.slice(0, 2).map((tag) => (
                 <span

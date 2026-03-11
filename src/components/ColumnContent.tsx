@@ -13,13 +13,11 @@ interface ColumnContentProps {
 export default function ColumnContent({ column }: ColumnContentProps) {
   const { tasks } = useApp();
   const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
 
   const columnTasks = tasks.filter((t) => t.columnId === column.id);
 
   const handleTaskSaved = () => {
     setIsAddTaskOpen(false);
-    setRefreshKey((prev) => prev + 1);
   };
 
   if (columnTasks.length === 0) {
@@ -47,7 +45,7 @@ export default function ColumnContent({ column }: ColumnContentProps) {
   }
 
   return (
-    <div key={refreshKey}>
+    <div>
       {columnTasks.map((task) => (
         <TaskCard key={task.id} task={task} onTaskUpdated={() => {}} />
       ))}
