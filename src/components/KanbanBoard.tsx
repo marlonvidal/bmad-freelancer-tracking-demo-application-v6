@@ -19,8 +19,10 @@ import {
 import { useApp } from '@/context/AppContext';
 import type { Column } from '@/db';
 import ColumnHeader from './ColumnHeader';
+import type { QuickAddFieldHandle } from './QuickAddField';
 import AddColumnDialog from './AddColumnDialog';
 import { Button } from '@/components/ui/button';
+import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut';
 
 export default function KanbanBoard() {
   const { columns, reorderColumns, tasks, moveTask } = useApp();
@@ -28,6 +30,20 @@ export default function KanbanBoard() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const previousTasksRef = useRef<Map<number, { columnId: number; order: number }>>(new Map());
+
+  // Ref map: columnId → QuickAddFieldHandle
+  const quickAddRefs = useRef<Map<number, QuickAddFieldHandle>>(new Map());
+  // Track last active column for shortcut
+  const lastActiveColumnId = useRef<number | null>(null);
+
+  const focusQuickAdd = useCallback(() => {
+    const targetId = lastActiveColumnId.current ?? items[0]?.id;
+    if (targetId != null) {
+      quickAddRefs.current.get(targetId)?.focus();
+    }
+  }, [items]);
+
+  useKeyboardShortcut('n', focusQuickAdd, { cmdOrCtrl: true, shift: true });
 
   useEffect(() => {
     setItems(columns);
@@ -145,7 +161,20 @@ export default function KanbanBoard() {
         <SortableContext items={items.map(c => c.id!)} strategy={horizontalListSortingStrategy}>
           <div className="flex gap-6 overflow-x-auto pb-4" data-testid="kanban-board">
             {items.map(column => (
-              <ColumnHeader key={column.id} column={column} />
+              <ColumnHeader
+                key={column.id}
+                column={column}
+                quickAddRef={(handle) => {
+                  if (handle) {
+                    quickAddRefs.current.set(column.id!, handle);
+                    if (lastActiveColumnId.current === null) {
+                      lastActiveColumnId.current = column.id!;
+                    }
+                  } else {
+                    quickAddRefs.current.delete(column.id!);
+                  }
+                }}
+              />
             ))}
           </div>
         </SortableContext>

@@ -4,6 +4,7 @@ import type { Task } from '@/db';
 import { Button } from '@/components/ui/button';
 import { Trash2, Edit2 } from 'lucide-react';
 import TaskForm from './TaskForm';
+import TaskSummary from './TaskSummary';
 
 interface TaskCardProps {
   task: Task;
@@ -53,16 +54,24 @@ export default function TaskCard({ task, onTaskUpdated }: TaskCardProps) {
 
   return (
     <>
-      <div className="bg-white border border-gray-200 rounded-lg p-5 mb-3 shadow-sm hover:shadow-md transition-shadow">
+      <div
+        className="bg-white border border-gray-200 rounded-lg p-5 mb-3 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+        data-testid="task-card"
+        onClick={() => setIsEditOpen(true)}
+        role="button"
+        tabIndex={0}
+        aria-label={`Open task: ${task.title}`}
+        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setIsEditOpen(true); } }}
+      >
         <div className="flex items-start justify-between gap-2 mb-2">
           <h3 className="text-base font-semibold flex-1 text-gray-900">
             {task.title}
           </h3>
-          <div className="flex gap-1">
+          <div className="flex gap-1" onClick={e => e.stopPropagation()}>
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setIsEditOpen(true)}
+              onClick={e => { e.stopPropagation(); setIsEditOpen(true); }}
               aria-label="Edit task"
               className="p-1 h-auto min-h-[44px] min-w-[44px]"
             >
@@ -71,7 +80,7 @@ export default function TaskCard({ task, onTaskUpdated }: TaskCardProps) {
             <Button
               variant="ghost"
               size="sm"
-              onClick={handleDelete}
+              onClick={e => { e.stopPropagation(); handleDelete(); }}
               aria-label="Delete task"
               className="p-1 h-auto min-h-[44px] min-w-[44px]"
             >
@@ -124,6 +133,8 @@ export default function TaskCard({ task, onTaskUpdated }: TaskCardProps) {
               )}
             </div>
           )}
+
+          <TaskSummary task={task} />
         </div>
       </div>
 

@@ -1,6 +1,16 @@
 import Dexie from 'dexie';
 import type { Table } from 'dexie';
 
+export interface Subtask {
+  id?: number;
+  taskId: number;
+  title: string;
+  completed: boolean;
+  order?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // Define types for each store
 export interface Task {
   id?: number;
@@ -72,6 +82,7 @@ export class FreelancerDB extends Dexie {
   projects!: Table<Project>;
   timeEntries!: Table<TimeEntry>;
   settings!: Table<Settings>;
+  subtasks!: Table<Subtask>;
 
   constructor() {
     super('FreelancerTrackerDB');
@@ -82,6 +93,15 @@ export class FreelancerDB extends Dexie {
       projects: '++id, clientId',
       timeEntries: '++id, taskId',
       settings: '++id, key'
+    });
+    this.version(2).stores({
+      tasks: '++id, columnId, clientId, projectId, order',
+      columns: '++id',
+      clients: '++id',
+      projects: '++id, clientId',
+      timeEntries: '++id, taskId',
+      settings: '++id, key',
+      subtasks: '++id, taskId, order'
     });
   }
 }

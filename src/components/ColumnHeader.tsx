@@ -15,14 +15,16 @@ import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { useApp } from '@/context/AppContext';
 import type { Column } from '@/db';
 import SortableColumn from './SortableColumn';
+import type { QuickAddFieldHandle } from './QuickAddField';
 import { Button } from '@/components/ui/button';
 import { Trash2 } from 'lucide-react';
 
 interface ColumnHeaderProps {
   column: Column;
+  quickAddRef?: React.Ref<QuickAddFieldHandle>;
 }
 
-export default function ColumnHeader({ column }: ColumnHeaderProps) {
+export default function ColumnHeader({ column, quickAddRef }: ColumnHeaderProps) {
   const { deleteColumn, updateColumn, tasks, moveTask } = useApp();
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(column.name);
@@ -194,10 +196,11 @@ export default function ColumnHeader({ column }: ColumnHeaderProps) {
           collisionDetection={closestCenter}
           onDragEnd={handleTaskDragEnd}
         >
-          <SortableColumn 
-            column={column} 
+          <SortableColumn
+            column={column}
             tasks={columnTasks}
             onTaskUpdated={() => {}}
+            quickAddRef={quickAddRef}
           />
         </DndContext>
       </div>

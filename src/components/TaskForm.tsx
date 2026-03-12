@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import SubtasksPanel from './SubtasksPanel';
 
 interface TaskFormProps {
   open: boolean;
@@ -137,7 +138,10 @@ export default function TaskForm({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent onKeyDown={handleKeyDown}>
+      <DialogContent
+        onKeyDown={handleKeyDown}
+        data-testid={initialData?.id ? 'task-detail-panel' : undefined}
+      >
         <DialogHeader>
           <DialogTitle>{initialData?.id ? 'Edit Task' : 'Create Task'}</DialogTitle>
         </DialogHeader>
@@ -234,6 +238,8 @@ export default function TaskForm({
             />
           </div>
         </div>
+
+        {initialData?.id && <SubtasksPanel task={initialData} />}
 
         <DialogFooter>
           <Button tabIndex={6} variant="outline" onClick={() => onOpenChange(false)}>

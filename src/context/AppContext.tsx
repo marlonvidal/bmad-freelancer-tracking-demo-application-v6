@@ -1,13 +1,15 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode, FC } from 'react';
-import type { Task, Column } from '@/db';
+import type { Task, Column, Subtask } from '@/db';
 import { db } from '@/db';
 import { TaskSchema, TaskFormSchema, ColumnSchema } from '@/db/validation';
 import type { TaskFormData } from '@/db/validation';
+import { SubtaskFormSchema } from '@/schemas/subtask';
 
 interface AppContextType {
   tasks: Task[];
   columns: Column[];
+  subtasks: Subtask[];
   isLoading: boolean;
   createTask: (columnId: number, data: TaskFormData) => Promise<Task>;
   addTask: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
@@ -18,6 +20,10 @@ interface AppContextType {
   deleteColumn: (id: number) => Promise<void>;
   reorderColumns: (columns: Column[]) => Promise<void>;
   moveTask: (taskId: number, targetColumnId: number, newOrder: number) => Promise<void>;
+  addSubtask: (taskId: number, title: string) => Promise<Subtask>;
+  deleteSubtask: (subtaskId: number) => Promise<void>;
+  toggleSubtaskCompletion: (subtaskId: number) => Promise<void>;
+  updateSubtaskOrder: (subtaskId: number, newOrder: number) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -25,6 +31,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [columns, setColumns] = useState<Column[]>([]);
+  const [subtasks, setSubtasks] = useState<Subtask[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const getCurrentTimestamp = () => new Date().toISOString();
@@ -36,9 +43,10 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
         setIsLoading(true);
         
         // Load all data
-        const [tasksData, columnsData] = await Promise.all([
+        const [tasksData, columnsData, subtasksData] = await Promise.all([
           db.tasks.toArray(),
           db.columns.toArray(),
+          db.subtasks.toArray(),
         ]);
         
         // Migrate task order field for existing tasks
@@ -82,6 +90,7 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
         
         setTasks(migratedTasks);
         setColumns(columnsData);
+        setSubtasks(subtasksData);
       } catch (error) {
         console.error('Failed to load data from IndexedDB:', error);
       } finally {
@@ -161,7 +170,10 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
   const deleteTask = async (id: number) => {
     try {
+      // Cascade-delete associated subtasks
+      await db.subtasks.where('taskId').equals(id).delete();
       await db.tasks.delete(id);
+      setSubtasks(prev => prev.filter(s => s.taskId !== id));
       setTasks(tasks.filter(t => t.id !== id));
     } catch (error) {
       console.error('Failed to delete task:', error);
@@ -305,8 +317,87 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
     }
   };
 
+  const addSubtask = async (taskId: number, title: string): Promise<Subtask> => {
+    try {
+      const validData = SubtaskFormSchema.parse({ taskId, title, completed: false });
+      const taskSubtasks = subtasks.filter(s => s.taskId === taskId);
+      const newOrder = taskSubtasks.length > 0
+        ? Math.max(...taskSubtasks.map(s => s.order ?? 0)) + 1
+        : 0;
+      const now = getCurrentTimestamp();
+      const subtaskData: Omit<Subtask, 'id'> = {
+        ...validData,
+        order: newOrder,
+        createdAt: now,
+        updatedAt: now,
+      };
+      const id = await db.subtasks.add(subtaskData);
+      const newSubtask: Subtask = { ...subtaskData, id };
+      setSubtasks(prev => [...prev, newSubtask]);
+      return newSubtask;
+    } catch (err: any) {
+      console.error('Failed to add subtask:', err);
+      throw new Error(err.message || 'Failed to add subtask');
+    }
+  };
+
+  const deleteSubtask = async (subtaskId: number): Promise<void> => {
+    try {
+      await db.subtasks.delete(subtaskId);
+      setSubtasks(prev => prev.filter(s => s.id !== subtaskId));
+    } catch (err: any) {
+      console.error('Failed to delete subtask:', err);
+      throw new Error(err.message || 'Failed to delete subtask');
+    }
+  };
+
+  const toggleSubtaskCompletion = async (subtaskId: number): Promise<void> => {
+    try {
+      const subtask = subtasks.find(s => s.id === subtaskId);
+      if (!subtask) throw new Error('Subtask not found');
+      const now = getCurrentTimestamp();
+      const updated: Subtask = { ...subtask, completed: !subtask.completed, updatedAt: now };
+      await db.subtasks.update(subtaskId, { completed: updated.completed, updatedAt: now });
+      setSubtasks(prev => prev.map(s => s.id === subtaskId ? updated : s));
+    } catch (err: any) {
+      console.error('Failed to toggle subtask completion:', err);
+      throw new Error(err.message || 'Failed to toggle subtask completion');
+    }
+  };
+
+  const updateSubtaskOrder = async (subtaskId: number, newOrder: number): Promise<void> => {
+    try {
+      const now = getCurrentTimestamp();
+      await db.subtasks.update(subtaskId, { order: newOrder, updatedAt: now });
+      setSubtasks(prev =>
+        prev.map(s => s.id === subtaskId ? { ...s, order: newOrder, updatedAt: now } : s)
+      );
+    } catch (err: any) {
+      console.error('Failed to update subtask order:', err);
+      throw new Error(err.message || 'Failed to update subtask order');
+    }
+  };
+
   return (
-    <AppContext.Provider value={{ tasks, columns, isLoading, createTask, addTask, updateTask, deleteTask, addColumn, updateColumn, deleteColumn, reorderColumns, moveTask }}>
+    <AppContext.Provider value={{
+      tasks,
+      columns,
+      subtasks,
+      isLoading,
+      createTask,
+      addTask,
+      updateTask,
+      deleteTask,
+      addColumn,
+      updateColumn,
+      deleteColumn,
+      reorderColumns,
+      moveTask,
+      addSubtask,
+      deleteSubtask,
+      toggleSubtaskCompletion,
+      updateSubtaskOrder,
+    }}>
       {children}
     </AppContext.Provider>
   );
