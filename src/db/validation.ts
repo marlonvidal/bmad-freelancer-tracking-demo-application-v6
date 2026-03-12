@@ -11,6 +11,7 @@ export const TaskSchema = z.object({
   dueDate: z.string().optional(),
   priority: z.enum(['Low', 'Medium', 'High', 'Urgent']).default('Medium'),
   tags: z.array(z.string()).optional(),
+  order: z.number().nonnegative('Task order must be non-negative').optional(),
   completed: z.boolean().default(false),
   clientId: z.number().positive().optional(),
   projectId: z.number().positive().optional(),
@@ -21,12 +22,13 @@ export const TaskSchema = z.object({
   updatedAt: ISODateSchema,
 });
 
-// Form validation schema (excludes id, createdAt, updatedAt, completed)
+// Form validation schema (excludes id, createdAt, updatedAt, completed, order)
 export const TaskFormSchema = TaskSchema.omit({
   id: true,
   createdAt: true,
   updatedAt: true,
   completed: true,
+  order: true,
 });
 
 export const ColumnSchema = z.object({

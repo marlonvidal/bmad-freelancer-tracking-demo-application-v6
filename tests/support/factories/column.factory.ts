@@ -1,137 +1,105 @@
 import { faker } from '@faker-js/faker';
 
 /**
- * Column Data Factory for ATDD Tests
- * 
- * Generates realistic test data for Kanban board columns
- * Used with Dexie.js IndexedDB for testing
+ * Column Schema (Dexie)
  */
-
 export interface Column {
   id?: number;
   name: string;
   order: number;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string;
 }
 
 /**
- * Create a single column with optional overrides
- * @param overrides - Partial column object to override defaults
- * @returns Complete column object with defaults
+ * Column Factory
+ * 
+ * Creates realistic column data for kanban board tests.
  */
-export function createColumn(overrides?: Partial<Column>): Column {
-  const baseOrder = Math.floor(Math.random() * 1000);
-  
+
+interface ColumnOverrides {
+  id?: number;
+  name?: string;
+  order?: number;
+  createdAt?: string;
+}
+
+let columnIdCounter = 1;
+
+const defaultColumnNames = [
+  'To Do',
+  'In Progress',
+  'In Review',
+  'Done',
+  'Backlog',
+  'On Hold',
+];
+
+/**
+ * Create a single column with optional overrides
+ * @param overrides - Partial column properties to override defaults
+ * @returns Column object
+ */
+export function createColumn(overrides?: ColumnOverrides): Column {
+  const baseId = columnIdCounter++;
+
   return {
-    id: Math.floor(Math.random() * 999999),
-    name: faker.word.noun() + ' ' + faker.word.noun(),
-    order: baseOrder,
-    createdAt: faker.date.past(),
-    updatedAt: faker.date.recent(),
-    ...overrides,
+    id: overrides?.id ?? baseId,
+    name:
+      overrides?.name ??
+      defaultColumnNames[baseId % defaultColumnNames.length],
+    order: overrides?.order ?? baseId - 1,
+    createdAt: overrides?.createdAt ?? faker.date.past().toISOString(),
   };
 }
 
 /**
- * Create multiple columns
+ * Create multiple columns with optional overrides
  * @param count - Number of columns to create
- * @param overrides - Partial column object to apply to all
- * @returns Array of column objects
+ * @param overrides - Partial column properties applied to all created columns
+ * @returns Array of Column objects
  */
-export function createColumns(
-  count: number,
-  overrides?: Partial<Column>
-): Column[] {
-  return Array.from({ length: count }, (_, index) =>
-    createColumn({
-      order: index,
+export function createColumns(count: number, overrides?: ColumnOverrides): Column[] {
+  const columns: Column[] = [];
+
+  for (let i = 0; i < count; i++) {
+    const column = createColumn({
       ...overrides,
-    })
-  );
+      order: overrides?.order !== undefined ? overrides.order + i : i,
+    });
+    columns.push(column);
+  }
+
+  return columns;
 }
 
 /**
- * Create default board columns (as might exist after Story 1.3)
- * @returns Array of typical default columns
+ * Create standard kanban columns (To Do, In Progress, Done)
+ * @returns Array of 3 standard columns
  */
-export function createDefaultColumns(): Column[] {
+export function createStandardKanbanColumns(): Column[] {
   return [
-    createColumn({
-      id: 1,
-      name: 'Backlog',
-      order: 0,
-    }),
-    createColumn({
-      id: 2,
-      name: 'In Progress',
-      order: 1,
-    }),
-    createColumn({
-      id: 3,
-      name: 'Review',
-      order: 2,
-    }),
-    createColumn({
-      id: 4,
-      name: 'Done',
-      order: 3,
-    }),
+    createColumn({ name: 'To Do', order: 0 }),
+    createColumn({ name: 'In Progress', order: 1 }),
+    createColumn({ name: 'Done', order: 2 }),
   ];
 }
 
 /**
- * Column names commonly used in testing
+ * Reset column ID counter for test isolation
  */
-export const COMMON_COLUMN_NAMES = [
-  'Backlog',
-  'To Do',
-  'In Progress',
-  'Review',
-  'QA',
-  'Done',
-  'Blocked',
-  'High Priority',
-  'Low Priority',
-  'Waiting',
-];
-
-/**
- * Generate column name with uniqueness guarantee
- * @param prefix - Optional prefix for column name
- * @returns Unique column name
- */
-export function generateUniqueColumnName(prefix = ''): string {
-  const baseNames = COMMON_COLUMN_NAMES;
-  const randomName = faker.helpers.arrayElement(baseNames);
-  const timestamp = Date.now().toString().slice(-4);
-  
-  return prefix ? `${prefix} ${randomName} ${timestamp}` : `${randomName} ${timestamp}`;
+export function resetColumnIdCounter(): void {
+  columnIdCounter = 1;
 }
 
 /**
- * Create a column with a specific name (useful for testing)
- * @param name - Column name
- * @param order - Position in column order
- * @returns Column object
+ * Create a custom named column
  */
-export function createNamedColumn(name: string, order: number): Column {
+export function createColumnWithName(
+  name: string,
+  overrides?: ColumnOverrides
+): Column {
   return createColumn({
     name,
-    order,
+    ...overrides,
   });
-}
-
-/**
- * Create columns for a complete kanban workflow
- * @returns Array of kanban workflow columns
- */
-export function createKanbanWorkflowColumns(): Column[] {
-  return [
-    createNamedColumn('Backlog', 0),
-    createNamedColumn('To Do', 1),
-    createNamedColumn('In Progress', 2),
-    createNamedColumn('Review', 3),
-    createNamedColumn('Done', 4),
-  ];
 }

@@ -1,9 +1,20 @@
 import { useState } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { useApp } from '@/context/AppContext';
 import type { Column } from '@/db';
-import ColumnContent from './ColumnContent';
+import SortableColumn from './SortableColumn';
 import { Button } from '@/components/ui/button';
 import { Trash2 } from 'lucide-react';
 
@@ -12,7 +23,7 @@ interface ColumnHeaderProps {
 }
 
 export default function ColumnHeader({ column }: ColumnHeaderProps) {
-  const { deleteColumn, updateColumn } = useApp();
+  const { deleteColumn, updateColumn, tasks, moveTask } = useApp();
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(column.name);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -61,12 +72,66 @@ export default function ColumnHeader({ column }: ColumnHeaderProps) {
     }
   };
 
+  const columnTasks = tasks
+    .filter(t => t.columnId === column.id)
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleTaskDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (!over || active.id === over.id) return;
+
+    try {
+      const taskId = Number(active.id);
+      const activeTask = tasks.find(t => t.id === taskId);
+      if (!activeTask) return;
+
+      // Parse target (could be a task ID or column ID)
+      let targetColumnId = column.id!;
+      let newOrder = 0;
+
+      if (over.id.toString().startsWith('column-')) {
+        targetColumnId = Number(over.id.toString().replace('column-', ''));
+        newOrder = tasks.filter(t => t.columnId === targetColumnId).length;
+      } else {
+        // Dropping on another task
+        const overTaskId = Number(over.id);
+        const overTask = tasks.find(t => t.id === overTaskId);
+        if (overTask) {
+          targetColumnId = overTask.columnId;
+          newOrder = overTask.order ?? 0;
+        }
+      }
+
+      await moveTask(taskId, targetColumnId, newOrder);
+    } catch (error) {
+      console.error('Task drag-and-drop error:', error);
+    }
+  };
+
   return (
     <div
       ref={setNodeRef}
       style={style}
       className="flex-shrink-0 w-80 bg-gray-50 rounded-lg border border-gray-200 p-6"
-      data-testid={`column-${column.name.toLowerCase().replace(/\s+/g, '-')}`}
+      data-testid={`column-${column.id}`}
     >
       <div
         {...attributes}
@@ -124,7 +189,17 @@ export default function ColumnHeader({ column }: ColumnHeaderProps) {
         </Button>
       </div>
       <div className="flex-1 overflow-y-auto">
-        <ColumnContent column={column} />
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleTaskDragEnd}
+        >
+          <SortableColumn 
+            column={column} 
+            tasks={columnTasks}
+            onTaskUpdated={() => {}}
+          />
+        </DndContext>
       </div>
     </div>
   );

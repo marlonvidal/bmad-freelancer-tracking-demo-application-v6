@@ -10,6 +10,7 @@ export interface Task {
   dueDate?: string;
   priority: 'Low' | 'Medium' | 'High' | 'Urgent';
   tags?: string[];
+  order?: number;
   completed: boolean;
   clientId?: number;
   projectId?: number;
@@ -75,7 +76,7 @@ export class FreelancerDB extends Dexie {
   constructor() {
     super('FreelancerTrackerDB');
     this.version(1).stores({
-      tasks: '++id, columnId, clientId, projectId',
+      tasks: '++id, columnId, clientId, projectId, order',
       columns: '++id',
       clients: '++id',
       projects: '++id, clientId',

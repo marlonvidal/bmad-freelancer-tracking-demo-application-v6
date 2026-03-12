@@ -1,451 +1,392 @@
+import { test, expect } from '@playwright/test';
+
 /**
- * Drag-and-Drop E2E Tests — Story 1.6
- *
- * Tests for moving and reordering tasks via drag-and-drop.
- * These tests are ready-to-activate once story 1.6 is implemented.
- *
- * Activation checklist:
- * - [ ] @dnd-kit integrated into kanban board
- * - [ ] data-testid="task-card" on each task card
- * - [ ] data-testid="column-{name}" on each column
- * - [ ] data-testid="drop-indicator" on drop target indicator
- * - [ ] Keyboard DnD support via @dnd-kit keyboard sensor
- * - [ ] Remove skip tags from tests as features are implemented
+ * ATDD RED Phase Tests: Story 1.6 - Drag-and-Drop
+ * 
+ * These tests are currently FAILING (RED phase of TDD).
+ * They define the expected behavior before implementation.
+ * 
+ * Implementation checklist shows what needs to be built to make these tests pass.
  */
-import { test, expect } from '../support/fixtures/merged-fixtures';
-import {
-  createTask,
-  createInProgressTask,
-  createCompletedTask,
-} from '../support/factories';
-import { seedTasks, getTasksFromStorage } from '../support/helpers/local-storage';
-import { BoardPage } from '../support/page-objects/board-page';
 
-// Helper: drag a task card to a target column using mouse events
-async function dragTaskToColumn(
-  page: import('@playwright/test').Page,
-  taskTitle: string,
-  targetColumnName: string,
-): Promise<void> {
-  const board = new BoardPage(page);
-  const taskCard = board.getTaskCard(taskTitle);
-  const targetColumn = board.getColumn(targetColumnName);
-
-  const taskBox = await taskCard.boundingBox();
-  const columnBox = await targetColumn.boundingBox();
-
-  if (!taskBox || !columnBox) throw new Error(`Could not get bounding box for task or column`);
-
-  // Drag from task card center to target column center
-  await page.mouse.move(taskBox.x + taskBox.width / 2, taskBox.y + taskBox.height / 2);
-  await page.mouse.down();
-  await page.mouse.move(columnBox.x + columnBox.width / 2, columnBox.y + columnBox.height / 2, { steps: 10 });
-  await page.mouse.up();
-}
-
-test.describe('Drag-and-Drop — Move Between Columns', () => {
-  test.skip('[P0] should move a task from one column to another', async ({ page }) => {
-    // Given a task in the Backlog column
-    const task = createTask({ title: 'Move me task', status: 'todo' });
-    await seedTasks(page, [task]);
-
-    const board = new BoardPage(page);
-    await board.goto();
-
-    // When the task is dragged to the In Progress column
-    await dragTaskToColumn(page, 'Move me task', 'In Progress');
-
-    // Then the task appears in the In Progress column
-    const inProgressColumn = board.getColumn('In Progress');
-    await expect(inProgressColumn.getByText('Move me task')).toBeVisible();
-
-    // And the task no longer appears in the Backlog column
-    const backlogColumn = board.getColumn('Backlog');
-    await expect(backlogColumn.getByText('Move me task')).not.toBeVisible();
+test.describe('Drag-and-Drop Functionality', () => {
+  test.beforeEach(async ({ page }) => {
+    // Navigate to home page
+    await page.goto('/');
+    
+    // Wait for kanban board to load
+    await page.waitForSelector('[data-testid="kanban-board"]');
   });
 
-  test.skip('[P0] should persist task column change after page reload', async ({ page }) => {
-    // Given a task is moved from Backlog to In Progress
-    const task = createTask({ title: 'Persistent move task', status: 'todo' });
-    await seedTasks(page, [task]);
+  // ============================================================================
+  // AC 1: Drag Task Between Columns
+  // ============================================================================
 
-    const board = new BoardPage(page);
-    await board.goto();
-    await dragTaskToColumn(page, 'Persistent move task', 'In Progress');
+  test('should move task from one column to another and persist', async ({
+    page,
+  }) => {
+    // GIVEN: Two columns with tasks
+    // Assumption: Story 1.4 and 1.5 fixtures have created columns and tasks
+    const taskInColumn1 = page.locator('[data-testid="task-1"]').first();
+    const targetColumn = page.locator('[data-testid="column-2"]');
 
-    // When the page is reloaded
+    // WHEN: I drag task from column 1 to column 2
+    await taskInColumn1.dragTo(targetColumn);
+
+    // THEN: Task appears in column 2
+    const taskInColumn2 = targetColumn.locator('[data-testid="task-1"]');
+    await expect(taskInColumn2).toBeVisible();
+
+    // AND: Refresh page
     await page.reload();
+    await page.waitForSelector('[data-testid="kanban-board"]');
 
-    // Then the task is still in the In Progress column
-    const inProgressColumn = board.getColumn('In Progress');
-    await expect(inProgressColumn.getByText('Persistent move task')).toBeVisible();
-
-    // And the task status is updated in storage
-    const storedTasks = await getTasksFromStorage(page);
-    const moved = storedTasks.find((t: { title: string }) => t.title === 'Persistent move task');
-    expect(moved?.status).toBe('in-progress');
+    // AND: Task remains in column 2 after refresh
+    const refreshedTask = page
+      .locator('[data-testid="column-2"]')
+      .locator('[data-testid="task-1"]');
+    await expect(refreshedTask).toBeVisible();
   });
 
-  test.skip('[P0] should show visual drop indicator during drag', async ({ page }) => {
-    // Given a task in the Backlog column
-    const task = createTask({ title: 'Drag indicator task', status: 'todo' });
-    await seedTasks(page, [task]);
+  test('should preserve task order when moving to column with existing tasks', async ({
+    page,
+  }) => {
+    // GIVEN: Column 1 with 2 tasks, Column 2 with 3 tasks
+    // Assumption: Fixtures create known test data
+    const taskFromColumn1 = page.locator('[data-testid="task-1"]').first();
+    const column2DropZone = page.locator('[data-testid="column-2"]');
 
-    const board = new BoardPage(page);
-    await board.goto();
+    // WHEN: I drag task from column 1 to middle of column 2
+    // (Drop between position 1 and 2 of column 2)
+    await taskFromColumn1.dragTo(column2DropZone, {
+      targetPosition: { x: 0, y: 100 }, // Position in middle of column
+    });
 
-    const taskCard = board.getTaskCard('Drag indicator task');
-    const taskBox = await taskCard.boundingBox();
-    if (!taskBox) throw new Error('No bounding box');
+    // THEN: Task inserted between existing tasks, others shift
+    const tasksInColumn2 = column2DropZone.locator('[data-testid^="task-"]');
+    const taskCount = await tasksInColumn2.count();
+    expect(taskCount).toBe(4); // Original 3 + moved task
+  });
 
-    // When the task is being dragged (mouse down, move but not release)
-    await page.mouse.move(taskBox.x + taskBox.width / 2, taskBox.y + taskBox.height / 2);
+  test('should show drop target highlight during drag-over', async ({
+    page,
+  }) => {
+    // GIVEN: Board with draggable task
+    const taskCard = page.locator('[data-testid="task-1"]').first();
+    const targetColumn = page.locator('[data-testid="column-2"]');
+
+    // WHEN: I start dragging task
+    await taskCard.hover();
     await page.mouse.down();
 
-    const inProgressColumn = board.getColumn('In Progress');
-    const columnBox = await inProgressColumn.boundingBox();
-    if (!columnBox) throw new Error('No column bounding box');
+    // AND: I drag over target column
+    await targetColumn.hover();
 
-    await page.mouse.move(columnBox.x + columnBox.width / 2, columnBox.y + columnBox.height / 2, { steps: 5 });
+    // THEN: Target column shows highlight (blue background, blue border)
+    const columnStyle = await targetColumn.evaluate((el) => {
+      const style = window.getComputedStyle(el);
+      return {
+        backgroundColor: style.backgroundColor,
+        borderColor: style.borderColor,
+      };
+    });
 
-    // Then the target column is highlighted as a valid drop target
-    await expect(inProgressColumn).toHaveClass(/highlight|drag-over|drop-target/);
+    // Verify highlight applied (class or inline style with blue color)
+    const isHighlighted =
+      columnStyle.backgroundColor.includes('blue') ||
+      columnStyle.borderColor.includes('blue');
+    expect(isHighlighted).toBe(true);
 
+    // CLEANUP: Release mouse
     await page.mouse.up();
   });
 
-  test.skip('[P1] should move task from In Progress to Done', async ({ page }) => {
-    // Given a task in the In Progress column
-    const task = createInProgressTask({ title: 'Completing task' });
-    await seedTasks(page, [task]);
+  test('should show drop indicator for insertion point', async ({ page }) => {
+    // GIVEN: Board with multiple tasks in a column
+    const taskCard = page.locator('[data-testid="task-1"]').first();
+    const targetColumn = page.locator('[data-testid="column-2"]');
 
-    const board = new BoardPage(page);
-    await board.goto();
-
-    // When the task is dragged to the Done column
-    await dragTaskToColumn(page, 'Completing task', 'Done');
-
-    // Then the task appears in the Done column
-    const doneColumn = board.getColumn('Done');
-    await expect(doneColumn.getByText('Completing task')).toBeVisible();
-
-    // And the task status is updated in storage
-    const storedTasks = await getTasksFromStorage(page);
-    const moved = storedTasks.find((t: { title: string }) => t.title === 'Completing task');
-    expect(moved?.status).toBe('done');
-  });
-
-  test.skip('[P1] should move task back from Done to Backlog', async ({ page }) => {
-    // Given a completed task
-    const task = createCompletedTask({ title: 'Reopen task' });
-    await seedTasks(page, [task]);
-
-    const board = new BoardPage(page);
-    await board.goto();
-
-    // When the task is dragged back to the Backlog column
-    await dragTaskToColumn(page, 'Reopen task', 'Backlog');
-
-    // Then the task appears in the Backlog column
-    const backlogColumn = board.getColumn('Backlog');
-    await expect(backlogColumn.getByText('Reopen task')).toBeVisible();
-  });
-});
-
-test.describe('Drag-and-Drop — Reorder Within Column', () => {
-  test.skip('[P0] should reorder tasks within the same column', async ({ page }) => {
-    // Given two tasks in the Backlog column
-    const tasks = [
-      createTask({ title: 'First task', status: 'todo' }),
-      createTask({ title: 'Second task', status: 'todo' }),
-      createTask({ title: 'Third task', status: 'todo' }),
-    ];
-    await seedTasks(page, tasks);
-
-    const board = new BoardPage(page);
-    await board.goto();
-
-    const backlogColumn = board.getColumn('Backlog');
-
-    // Verify initial order: First, Second, Third
-    const initialCards = await backlogColumn.getByTestId('task-card').all();
-    expect(initialCards).toHaveLength(3);
-
-    // When the first task is dragged below the third task
-    const firstCard = board.getTaskCard('First task');
-    const thirdCard = board.getTaskCard('Third task');
-
-    const firstBox = await firstCard.boundingBox();
-    const thirdBox = await thirdCard.boundingBox();
-    if (!firstBox || !thirdBox) throw new Error('No bounding box');
-
-    await page.mouse.move(firstBox.x + firstBox.width / 2, firstBox.y + firstBox.height / 2);
+    // WHEN: I start dragging task
+    await taskCard.hover();
     await page.mouse.down();
-    await page.mouse.move(thirdBox.x + thirdBox.width / 2, thirdBox.y + thirdBox.height + 5, { steps: 10 });
-    await page.mouse.up();
 
-    // Then the order changes: Second, Third, First
-    const reorderedCards = await backlogColumn.getByTestId('task-card').all();
-    const firstCardText = await reorderedCards[0].textContent();
-    expect(firstCardText).toContain('Second task');
+    // AND: I drag over gap between tasks in target column
+    await targetColumn.hover();
+
+    // THEN: Drop indicator appears (line or marker)
+    const dropIndicator = page.locator('[data-testid="drop-indicator"]');
+    await expect(dropIndicator).toBeVisible();
+
+    // CLEANUP
+    await page.mouse.up();
   });
 
-  test.skip('[P0] should persist reordered task positions after reload', async ({ page }) => {
-    // Given two tasks in the Backlog column
-    const tasks = [
-      createTask({ title: 'Alpha task', status: 'todo' }),
-      createTask({ title: 'Beta task', status: 'todo' }),
-    ];
-    await seedTasks(page, tasks);
+  // ============================================================================
+  // AC 2: Reorder Tasks Within Column
+  // ============================================================================
 
-    const board = new BoardPage(page);
-    await board.goto();
+  test('should reorder tasks within same column and persist', async ({
+    page,
+  }) => {
+    // GIVEN: Column with 3 tasks: A (id=1), B (id=2), C (id=3)
+    const column = page.locator('[data-testid="column-1"]');
+    const taskC = column.locator('[data-testid="task-3"]');
+    const taskA = column.locator('[data-testid="task-1"]');
 
-    // When Alpha is dragged below Beta
-    const alphaCard = board.getTaskCard('Alpha task');
-    const betaCard = board.getTaskCard('Beta task');
+    // Initial order: A, B, C
+    let tasks = await column.locator('[data-testid^="task-"]').all();
+    expect(tasks).toHaveLength(3);
 
-    const alphaBox = await alphaCard.boundingBox();
-    const betaBox = await betaCard.boundingBox();
-    if (!alphaBox || !betaBox) throw new Error('No bounding box');
+    // WHEN: I drag task C to position before A
+    await taskC.dragTo(taskA);
 
-    await page.mouse.move(alphaBox.x + alphaBox.width / 2, alphaBox.y + alphaBox.height / 2);
-    await page.mouse.down();
-    await page.mouse.move(betaBox.x + betaBox.width / 2, betaBox.y + betaBox.height + 5, { steps: 10 });
-    await page.mouse.up();
+    // THEN: Order becomes: C, A, B
+    const reorderedTasks = await column
+      .locator('[data-testid^="task-"]')
+      .all();
+    const firstTaskId = await reorderedTasks[0].getAttribute('data-testid');
+    expect(firstTaskId).toBe('task-3');
 
-    // When the page is reloaded
+    // AND: Refresh page to verify persistence
     await page.reload();
+    await page.waitForSelector('[data-testid="kanban-board"]');
 
-    // Then the order is preserved: Beta first, Alpha second
-    const backlogColumn = board.getColumn('Backlog');
-    const cards = await backlogColumn.getByTestId('task-card').all();
-    const firstText = await cards[0].textContent();
-    expect(firstText).toContain('Beta task');
+    // AND: Order is still C, A, B
+    const refreshedColumn = page.locator('[data-testid="column-1"]');
+    const refreshedTasks = await refreshedColumn
+      .locator('[data-testid^="task-"]')
+      .all();
+    const refreshedFirstTaskId =
+      await refreshedTasks[0].getAttribute('data-testid');
+    expect(refreshedFirstTaskId).toBe('task-3');
   });
 
-  test.skip('[P1] should show drop indicator during reorder', async ({ page }) => {
-    // Given two tasks in the Backlog column
-    const tasks = [
-      createTask({ title: 'Task A', status: 'todo' }),
-      createTask({ title: 'Task B', status: 'todo' }),
-    ];
-    await seedTasks(page, tasks);
+  test('should handle multiple consecutive reorders', async ({ page }) => {
+    // GIVEN: Column with 5 tasks
+    const column = page.locator('[data-testid="column-1"]');
+    let tasks = await column.locator('[data-testid^="task-"]').all();
+    expect(tasks).toHaveLength(5);
 
-    const board = new BoardPage(page);
-    await board.goto();
+    // WHEN: I perform multiple reorders
+    // Move task 5 to position 1
+    await column.locator('[data-testid="task-5"]').dragTo(column.locator('[data-testid="task-1"]'));
 
-    const taskACard = board.getTaskCard('Task A');
-    const taskBCard = board.getTaskCard('Task B');
+    // Move task 3 to end
+    const currentTask3 = column.locator('[data-testid="task-3"]');
+    const columnDropZone = column.locator('[data-testid="column-drop-zone"]');
+    if (await columnDropZone.isVisible()) {
+      await currentTask3.dragTo(columnDropZone);
+    }
 
-    const taskABox = await taskACard.boundingBox();
-    const taskBBox = await taskBCard.boundingBox();
-    if (!taskABox || !taskBBox) throw new Error('No bounding box');
+    // Move task 1 to middle
+    const currentTask1 = column.locator('[data-testid="task-1"]');
+    const middleTask = column.locator('[data-testid="task-2"]');
+    await currentTask1.dragTo(middleTask);
 
-    // When dragging Task A over Task B
-    await page.mouse.move(taskABox.x + taskABox.width / 2, taskABox.y + taskABox.height / 2);
-    await page.mouse.down();
-    await page.mouse.move(taskBBox.x + taskBBox.width / 2, taskBBox.y + taskBBox.height / 2, { steps: 5 });
-
-    // Then a drop indicator is visible
-    await expect(page.getByTestId('drop-indicator')).toBeVisible();
-
-    await page.mouse.up();
-  });
-});
-
-test.describe('Drag-and-Drop — Keyboard Accessibility', () => {
-  test.skip('[P1] should support keyboard-based task movement between columns', async ({ page }) => {
-    // Given a task in the Backlog column
-    const task = createTask({ title: 'Keyboard move task', status: 'todo' });
-    await seedTasks(page, [task]);
-
-    const board = new BoardPage(page);
-    await board.goto();
-
-    // When the task card is focused and moved via keyboard
-    const taskCard = board.getTaskCard('Keyboard move task');
-    await taskCard.focus();
-
-    // Activate drag mode (Space key per @dnd-kit)
-    await page.keyboard.press('Space');
-
-    // Move to next column (ArrowRight per @dnd-kit keyboard sensor)
-    await page.keyboard.press('ArrowRight');
-
-    // Drop (Space or Enter to confirm)
-    await page.keyboard.press('Space');
-
-    // Then the task is in the In Progress column
-    const inProgressColumn = board.getColumn('In Progress');
-    await expect(inProgressColumn.getByText('Keyboard move task')).toBeVisible();
+    // THEN: All moves succeed without error
+    const finalTasks = await column.locator('[data-testid^="task-"]').all();
+    expect(finalTasks).toHaveLength(5);
   });
 
-  test.skip('[P1] should announce drag-and-drop actions to screen readers', async ({ page }) => {
-    // Given a task in the Backlog column
-    const task = createTask({ title: 'Accessible drag task', status: 'todo' });
-    await seedTasks(page, [task]);
+  // ============================================================================
+  // AC 7: Performance with Multiple Tasks
+  // ============================================================================
 
-    const board = new BoardPage(page);
-    await board.goto();
+  test('should maintain smooth drag-and-drop with 100+ tasks', async ({
+    page,
+  }) => {
+    // GIVEN: Column with 100+ tasks (created by test fixture or factory)
+    // Assumption: Test data includes largeBoard fixture with 100 tasks
+    await page.goto('/?test-data=large-board');
+    await page.waitForSelector('[data-testid="kanban-board"]');
 
-    const taskCard = board.getTaskCard('Accessible drag task');
-    await taskCard.focus();
-    await page.keyboard.press('Space');
+    const column = page.locator('[data-testid="column-1"]');
 
-    // Then an aria-live region announces the drag start
-    const liveRegion = page.locator('[aria-live]');
-    await expect(liveRegion).toContainText(/picked up|dragging|lifted/i);
+    // WHEN: I perform drag operations and measure FPS
+    let frameCount = 0;
+    let lastTime = performance.now();
 
-    await page.keyboard.press('Escape'); // Cancel drag
-  });
+    // Collect frame timing
+    const collectFrames = await page.evaluate(() => {
+      return new Promise<number>((resolve) => {
+        let frames = 0;
+        let start = performance.now();
 
-  test.skip('[P2] should cancel drag with Escape key', async ({ page }) => {
-    // Given a task in the Backlog column
-    const task = createTask({ title: 'Cancel drag task', status: 'todo' });
-    await seedTasks(page, [task]);
+        function countFrame() {
+          frames++;
+          const elapsed = performance.now() - start;
+          if (elapsed >= 1000) {
+            resolve(frames); // Return FPS after 1 second
+          } else {
+            requestAnimationFrame(countFrame);
+          }
+        }
 
-    const board = new BoardPage(page);
-    await board.goto();
-
-    const taskCard = board.getTaskCard('Cancel drag task');
-    const taskBox = await taskCard.boundingBox();
-    if (!taskBox) throw new Error('No bounding box');
-
-    // When drag is initiated then cancelled with Escape
-    await page.mouse.move(taskBox.x + taskBox.width / 2, taskBox.y + taskBox.height / 2);
-    await page.mouse.down();
-    await page.mouse.move(taskBox.x + 200, taskBox.y, { steps: 5 });
-    await page.keyboard.press('Escape');
-    await page.mouse.up();
-
-    // Then the task remains in the Backlog column
-    const backlogColumn = board.getColumn('Backlog');
-    await expect(backlogColumn.getByText('Cancel drag task')).toBeVisible();
-  });
-});
-
-test.describe('Drag-and-Drop — Error Recovery', () => {
-  test.skip('[P1] should show error message if Dexie save fails during move', async ({ page }) => {
-    // Given a task in the Backlog column
-    const task = createTask({ title: 'Error recovery task', status: 'todo' });
-    await seedTasks(page, [task]);
-
-    const board = new BoardPage(page);
-    await board.goto();
-
-    // When IndexedDB is unavailable (simulate by intercepting storage)
-    await page.addInitScript(() => {
-      // Override indexedDB to simulate failure
-      const originalOpen = indexedDB.open.bind(indexedDB);
-      let callCount = 0;
-      Object.defineProperty(window, 'indexedDB', {
-        get: () => ({
-          open: (...args: Parameters<typeof originalOpen>) => {
-            callCount++;
-            if (callCount > 5) {
-              // Fail after initial load
-              const req = originalOpen(...args);
-              req.addEventListener('success', () => {
-                // Force transaction failure
-              });
-              return req;
-            }
-            return originalOpen(...args);
-          },
-        }),
+        requestAnimationFrame(countFrame);
       });
     });
 
-    await dragTaskToColumn(page, 'Error recovery task', 'In Progress');
+    // Drag a task while measuring
+    const task = column.locator('[data-testid="task-1"]');
+    await task.hover();
+    await page.mouse.down();
 
-    // Then an error message is shown
-    await expect(page.getByText(/failed to move task|please try again/i)).toBeVisible();
+    // Simulate drag movement
+    for (let i = 0; i < 5; i++) {
+      await page.mouse.move(100, 100 + i * 50, { steps: 5 });
+      await page.waitForTimeout(50);
+    }
 
-    // And the task reverts to its original column
-    const backlogColumn = board.getColumn('Backlog');
-    await expect(backlogColumn.getByText('Error recovery task')).toBeVisible();
-  });
-});
+    await page.mouse.up();
 
-test.describe('Drag-and-Drop — Performance', () => {
-  test.skip('[P2] should handle 20+ tasks without performance degradation', async ({ page }) => {
-    // Given 20 tasks spread across columns
-    const tasks = [
-      ...Array.from({ length: 8 }, (_, i) => createTask({ title: `Backlog task ${i + 1}`, status: 'todo' })),
-      ...Array.from({ length: 6 }, (_, i) => createInProgressTask({ title: `Active task ${i + 1}` })),
-      ...Array.from({ length: 6 }, (_, i) => createCompletedTask({ title: `Done task ${i + 1}` })),
-    ];
-    await seedTasks(page, tasks);
-
-    const board = new BoardPage(page);
-    await board.goto();
-
-    // When a task is dragged between columns
-    const startTime = Date.now();
-    await dragTaskToColumn(page, 'Backlog task 1', 'In Progress');
-    const elapsed = Date.now() - startTime;
-
-    // Then the drag operation completes within 2 seconds
-    expect(elapsed).toBeLessThan(2000);
-
-    // And the task is in the correct column
-    const inProgressColumn = board.getColumn('In Progress');
-    await expect(inProgressColumn.getByText('Backlog task 1')).toBeVisible();
+    // THEN: FPS >= 55 (allowing 10% variance from 60fps target)
+    expect(collectFrames).toBeGreaterThanOrEqual(55);
   });
 
-  test.skip('[P2] should respect prefers-reduced-motion', async ({ page }) => {
-    // Given the user prefers reduced motion
-    await page.emulateMedia({ reducedMotion: 'reduce' });
+  // ============================================================================
+  // AC 8: Data Integrity & Persistence
+  // ============================================================================
 
-    const task = createTask({ title: 'Reduced motion task', status: 'todo' });
-    await seedTasks(page, [task]);
+  test('should retain task position and column after page refresh', async ({
+    page,
+  }) => {
+    // GIVEN: Initial task positions
+    const taskToMove = page.locator('[data-testid="task-1"]').first();
+    const targetColumn = page.locator('[data-testid="column-2"]');
 
-    const board = new BoardPage(page);
-    await board.goto();
+    // WHEN: I move task to new column
+    await taskToMove.dragTo(targetColumn);
 
-    // When a task is dragged
-    await dragTaskToColumn(page, 'Reduced motion task', 'In Progress');
+    // AND: Wait for save to complete
+    await page.waitForTimeout(500); // Allow Dexie to persist
 
-    // Then the task moves without animation (no transition classes)
-    const inProgressColumn = board.getColumn('In Progress');
-    await expect(inProgressColumn.getByText('Reduced motion task')).toBeVisible();
+    // AND: Refresh page
+    await page.reload();
+    await page.waitForSelector('[data-testid="kanban-board"]');
 
-    // And no animation-related CSS classes are applied during drag
-    const taskCard = board.getTaskCard('Reduced motion task');
-    const classes = await taskCard.getAttribute('class');
-    expect(classes).not.toMatch(/animate|transition|motion/);
+    // THEN: Task appears in moved column (not original)
+    const movedTask = targetColumn.locator('[data-testid="task-1"]');
+    await expect(movedTask).toBeVisible();
+
+    // AND: Task NOT in original column
+    const originalColumn = page.locator('[data-testid="column-1"]');
+    const taskInOriginal = originalColumn.locator('[data-testid="task-1"]');
+    await expect(taskInOriginal).not.toBeVisible();
+
+    // AND: Verify Dexie persisted the change
+    const taskInDb = await page.evaluate(async (taskId) => {
+      // Assume db is available in window for testing
+      // This depends on how the app exports db for testing
+      const result = await (window as any).db?.tasks
+        .where('id')
+        .equals(taskId)
+        .first();
+      return result;
+    }, 1);
+
+    expect(taskInDb).toBeDefined();
+    expect(taskInDb?.columnId).toBe(2); // Moved to column 2
   });
-});
 
-test.describe('Drag-and-Drop — Data Integrity', () => {
-  test.skip('[P0] should preserve all task fields after move', async ({ page }) => {
-    // Given a task with all fields populated
-    const task = createTask({
-      title: 'Full field drag task',
-      description: 'Detailed description',
-      priority: 'high',
-      tags: ['frontend', 'critical'],
-      estimatedHours: 8,
-      status: 'todo',
+  // ============================================================================
+  // AC 4: Keyboard Support (Bonus - Optional)
+  // ============================================================================
+
+  test('should support keyboard navigation with arrow keys', async ({
+    page,
+  }) => {
+    // GIVEN: Focused on draggable task
+    const taskCard = page.locator('[data-testid="task-1"]').first();
+    await taskCard.focus();
+
+    // WHEN: I press Space to enter drag mode
+    await page.keyboard.press('Space');
+
+    // THEN: Task shows selected state
+    const ariaPressed = await taskCard.getAttribute('aria-pressed');
+    expect(ariaPressed).toBe('true');
+
+    // WHEN: I press ArrowDown to move down
+    await page.keyboard.press('ArrowDown');
+
+    // THEN: Task position updates
+    // (Exact behavior depends on @dnd-kit keyboard implementation)
+
+    // WHEN: I press Enter to drop
+    await page.keyboard.press('Enter');
+
+    // THEN: Task is dropped and aria-pressed is false
+    const ariaPressedAfterDrop = await taskCard.getAttribute('aria-pressed');
+    expect(ariaPressedAfterDrop).toBe('false');
+  });
+
+  // ============================================================================
+  // AC 5: Touch Support (Bonus - Optional)
+  // ============================================================================
+
+  test('should support touch drag-and-drop', async ({ page }) => {
+    // GIVEN: Mobile viewport and draggable task
+    await page.setViewportSize({ width: 390, height: 844 }); // iPhone 12
+    const taskCard = page.locator('[data-testid="task-1"]').first();
+    const targetColumn = page.locator('[data-testid="column-2"]');
+
+    // WHEN: I perform touch drag (long-press ~500ms, then drag)
+    const taskBox = await taskCard.boundingBox();
+    if (!taskBox) throw new Error('Task not visible');
+
+    // Simulate long-press
+    await page.touchscreen.tap(taskBox.x + taskBox.width / 2, taskBox.y + taskBox.height / 2);
+    await page.waitForTimeout(500); // Long-press duration
+
+    // Drag to target
+    const targetBox = await targetColumn.boundingBox();
+    if (!targetBox) throw new Error('Target column not visible');
+
+    await page.touchscreen.swipe(
+      taskBox.x + taskBox.width / 2,
+      taskBox.y + taskBox.height / 2,
+      targetBox.x + targetBox.width / 2,
+      targetBox.y + targetBox.height / 2,
+      { steps: 10 }
+    );
+
+    // THEN: Task moves to target column
+    const movedTask = targetColumn.locator('[data-testid="task-1"]');
+    await expect(movedTask).toBeVisible();
+  });
+
+  // ============================================================================
+  // AC 6: Error Recovery
+  // ============================================================================
+
+  test('should show error message and revert task on move failure', async ({
+    page,
+  }) => {
+    // GIVEN: Simulate Dexie error by intercepting database call
+    await page.route('**/*', async (route) => {
+      if (route.request().method() === 'POST' && route.request().postDataJSON()?.action === 'updateTask') {
+        // Simulate database error
+        await route.abort();
+      } else {
+        await route.continue();
+      }
     });
-    await seedTasks(page, [task]);
 
-    const board = new BoardPage(page);
-    await board.goto();
+    const taskCard = page.locator('[data-testid="task-1"]').first();
+    const targetColumn = page.locator('[data-testid="column-2"]');
+    const initialParent = page.locator('[data-testid="column-1"]');
 
-    // When the task is moved to In Progress
-    await dragTaskToColumn(page, 'Full field drag task', 'In Progress');
+    // WHEN: I try to move task (will fail)
+    await taskCard.dragTo(targetColumn);
+    await page.waitForTimeout(500); // Wait for error
 
-    // Then all task fields are preserved in storage
-    const storedTasks = await getTasksFromStorage(page);
-    const moved = storedTasks.find((t: { title: string }) => t.title === 'Full field drag task');
+    // THEN: Error message appears
+    const errorMessage = page.locator('[data-testid="error-message"]');
+    await expect(errorMessage).toBeVisible();
+    await expect(errorMessage).toContainText('Failed to move task');
 
-    expect(moved).toBeTruthy();
-    expect(moved?.description).toBe('Detailed description');
-    expect(moved?.priority).toBe('high');
-    expect(moved?.tags).toEqual(['frontend', 'critical']);
-    expect(moved?.estimatedHours).toBe(8);
-    expect(moved?.id).toBe(task.id);
+    // AND: Task reverts to original position
+    const revertedTask = initialParent.locator('[data-testid="task-1"]');
+    await expect(revertedTask).toBeVisible();
   });
 });

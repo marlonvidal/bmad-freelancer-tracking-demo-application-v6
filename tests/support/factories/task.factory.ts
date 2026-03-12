@@ -1,63 +1,72 @@
 import { faker } from '@faker-js/faker';
-import type { Task, Column } from '@/db';
+import { Task } from '@/schemas/task';
 
 /**
- * Task Factory
- * Creates task objects with sensible defaults and optional overrides.
- * Used in tests to seed IndexedDB with consistent test data.
+ * Task Data Factory
+ * 
+ * Generates realistic test task data using @faker-js/faker
+ * Supports overrides for specific test scenarios
  */
-export const createTask = (overrides: Partial<Task> = {}): Task => {
-  const now = new Date().toISOString();
 
+export function createTask(columnId: number = 1, overrides?: Partial<Task>): Task {
   return {
-    id: undefined, // Dexie will auto-generate
-    title: faker.lorem.sentence(),
+    title: faker.lorem.sentence({ min: 3, max: 10 }).replace(/\.$/, ''),
     description: faker.lorem.paragraph(),
-    columnId: 1,
-    dueDate: faker.date.future().toISOString().split('T')[0],
-    priority: faker.helpers.arrayElement(['low', 'medium', 'high'] as const),
-    tags: faker.lorem.words(3).split(' '),
-    clientId: undefined,
-    projectId: undefined,
-    billable: faker.datatype.boolean(),
-    hourlyRate: parseFloat(faker.commerce.price({ min: 20, max: 200 })),
-    timeEstimate: faker.number.int({ min: 30, max: 480 }), // in minutes
-    createdAt: now,
-    updatedAt: now,
+    columnId,
+    priority: faker.helpers.arrayElement(['Low', 'Medium', 'High', 'Urgent']),
+    tags: [faker.lorem.word(), faker.lorem.word()],
+    dueDate: faker.date.soon({ days: 30 }).toISOString().split('T')[0],
+    order: 0,
+    completed: false,
+    createdAt: faker.date.past({ years: 1 }).toISOString(),
+    updatedAt: faker.date.recent().toISOString(),
     ...overrides,
   };
-};
+}
 
 /**
- * Create multiple tasks
+ * Create multiple tasks with sequential order values
  */
-export const createTasks = (count: number, overrides: Partial<Task> = {}): Task[] => {
-  return Array.from({ length: count }, () => createTask(overrides));
-};
+export function createTasks(count: number, columnId: number = 1): Task[] {
+  return Array.from({ length: count }, (_, i) =>
+    createTask(columnId, { order: i }),
+  );
+}
 
 /**
- * Column Factory
- * Creates column objects with sensible defaults.
+ * Create a task with minimal required fields (for lightweight tests)
  */
-export const createColumn = (overrides: Partial<Column> = {}): Column => {
-  const now = new Date().toISOString();
-
+export function createMinimalTask(columnId: number = 1, overrides?: Partial<Task>): Task {
   return {
-    id: undefined,
-    name: faker.lorem.word(),
-    order: faker.number.int({ min: 1, max: 10 }),
-    createdAt: now,
-    updatedAt: now,
+    title: faker.lorem.sentence(),
+    columnId,
+    priority: 'Medium',
+    completed: false,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    order: 0,
     ...overrides,
   };
-};
+}
 
 /**
- * Create standard kanban columns
+ * Create a task with all fields filled (for comprehensive tests)
  */
-export const createStandardColumns = (): Partial<Column>[] => [
-  { name: 'Backlog', order: 1 },
-  { name: 'In Progress', order: 2 },
-  { name: 'Review', order: 3 },
-  { name: 'Done', order: 4 },
-];
+export function createFullTask(columnId: number = 1, overrides?: Partial<Task>): Task {
+  return {
+    id: faker.number.int({ min: 1, max: 10000 }),
+    title: faker.lorem.sentence(),
+    description: faker.lorem.paragraphs(2),
+    columnId,
+    priority: faker.helpers.arrayElement(['Low', 'Medium', 'High', 'Urgent']),
+    tags: Array.from({ length: faker.number.int({ min: 1, max: 3 }) }, () =>
+      faker.lorem.word(),
+    ),
+    dueDate: faker.date.soon({ days: 60 }).toISOString().split('T')[0],
+    order: 0,
+    completed: faker.datatype.boolean({ probability: 0.2 }),
+    createdAt: faker.date.past({ years: 2 }).toISOString(),
+    updatedAt: faker.date.recent().toISOString(),
+    ...overrides,
+  };
+}

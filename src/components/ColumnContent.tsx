@@ -14,7 +14,10 @@ export default function ColumnContent({ column }: ColumnContentProps) {
   const { tasks } = useApp();
   const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
 
-  const columnTasks = tasks.filter((t) => t.columnId === column.id);
+  // Filter tasks by column and sort by order field
+  const columnTasks = tasks
+    .filter((t) => t.columnId === column.id)
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
   const handleTaskSaved = () => {
     setIsAddTaskOpen(false);

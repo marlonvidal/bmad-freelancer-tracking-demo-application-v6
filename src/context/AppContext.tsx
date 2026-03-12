@@ -17,6 +17,7 @@ interface AppContextType {
   updateColumn: (id: number, updates: Partial<Column>) => Promise<void>;
   deleteColumn: (id: number) => Promise<void>;
   reorderColumns: (columns: Column[]) => Promise<void>;
+  moveTask: (taskId: number, targetColumnId: number, newOrder: number) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -33,11 +34,53 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
     const loadData = async () => {
       try {
         setIsLoading(true);
+        
+        // Load all data
         const [tasksData, columnsData] = await Promise.all([
           db.tasks.toArray(),
           db.columns.toArray(),
         ]);
-        setTasks(tasksData);
+        
+        // Migrate task order field for existing tasks
+        let migratedTasks = [...tasksData];
+        let needsUpdate = false;
+        
+        for (const task of migratedTasks) {
+          if (task.order === undefined || task.order === null) {
+            // Assign order based on creation date within each column
+            needsUpdate = true;
+          }
+        }
+        
+        if (needsUpdate) {
+          // Group tasks by column and sort by creation date
+          const tasksByColumn: Record<number, Task[]> = {};
+          for (const task of migratedTasks) {
+            if (!tasksByColumn[task.columnId]) {
+              tasksByColumn[task.columnId] = [];
+            }
+            tasksByColumn[task.columnId].push(task);
+          }
+          
+          // Assign order within each column
+          for (const columnId in tasksByColumn) {
+            const columnTasks = tasksByColumn[columnId];
+            columnTasks.sort((a, b) => 
+              new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+            );
+            
+            for (let i = 0; i < columnTasks.length; i++) {
+              if (columnTasks[i].order === undefined || columnTasks[i].order === null) {
+                columnTasks[i].order = i;
+                await db.tasks.update(columnTasks[i].id!, { order: i });
+              }
+            }
+          }
+          
+          migratedTasks = await db.tasks.toArray();
+        }
+        
+        setTasks(migratedTasks);
         setColumns(columnsData);
       } catch (error) {
         console.error('Failed to load data from IndexedDB:', error);
@@ -53,10 +96,15 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
       // Validate form data
       const validData = TaskFormSchema.parse(data);
       
+      // Calculate order: count existing tasks in column and add 1
+      const columnTasks = tasks.filter(t => t.columnId === columnId);
+      const newOrder = Math.max(...columnTasks.map(t => t.order ?? 0), -1) + 1;
+      
       const now = getCurrentTimestamp();
       const taskData: Omit<Task, 'id'> = {
         ...validData,
         columnId,
+        order: newOrder,
         completed: false,
         createdAt: now,
         updatedAt: now,
@@ -195,8 +243,70 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
     }
   };
 
+  const moveTask = async (taskId: number, targetColumnId: number, newOrder: number): Promise<void> => {
+    try {
+      const task = tasks.find(t => t.id === taskId);
+      if (!task) throw new Error('Task not found');
+
+      // If moving to new column, update all order values in target column
+      if (task.columnId !== targetColumnId) {
+        // Increment order for tasks in target column that are >= newOrder
+        const targetColumnTasks = tasks.filter(
+          t => t.columnId === targetColumnId && (t.order ?? 0) >= newOrder
+        );
+        
+        for (const t of targetColumnTasks) {
+          if (t.id && t.id !== taskId) {
+            await db.tasks.update(t.id, { order: (t.order ?? 0) + 1 });
+          }
+        }
+
+        // Update task: new column and order
+        await db.tasks.update(taskId, { columnId: targetColumnId, order: newOrder });
+      } else {
+        // Same column reorder
+        const oldOrder = task.order ?? 0;
+        if (newOrder > oldOrder) {
+          // If moving down, decrement order for tasks between old and new position
+          const affectedTasks = tasks.filter(
+            t => t.columnId === targetColumnId && 
+                 (t.order ?? 0) > oldOrder && 
+                 (t.order ?? 0) <= newOrder
+          );
+          for (const t of affectedTasks) {
+            if (t.id && t.id !== taskId) {
+              await db.tasks.update(t.id, { order: (t.order ?? 0) - 1 });
+            }
+          }
+        } else if (newOrder < oldOrder) {
+          // If moving up, increment order for tasks between new and old position
+          const affectedTasks = tasks.filter(
+            t => t.columnId === targetColumnId && 
+                 (t.order ?? 0) >= newOrder && 
+                 (t.order ?? 0) < oldOrder
+          );
+          for (const t of affectedTasks) {
+            if (t.id && t.id !== taskId) {
+              await db.tasks.update(t.id, { order: (t.order ?? 0) + 1 });
+            }
+          }
+        }
+
+        // Update task order
+        await db.tasks.update(taskId, { order: newOrder });
+      }
+
+      // Reload tasks from Dexie to ensure consistency
+      const updatedTasks = await db.tasks.toArray();
+      setTasks(updatedTasks);
+    } catch (err: any) {
+      console.error('Failed to move task:', err);
+      throw new Error(err.message || 'Failed to move task');
+    }
+  };
+
   return (
-    <AppContext.Provider value={{ tasks, columns, isLoading, createTask, addTask, updateTask, deleteTask, addColumn, updateColumn, deleteColumn, reorderColumns }}>
+    <AppContext.Provider value={{ tasks, columns, isLoading, createTask, addTask, updateTask, deleteTask, addColumn, updateColumn, deleteColumn, reorderColumns, moveTask }}>
       {children}
     </AppContext.Provider>
   );

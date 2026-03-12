@@ -1,6 +1,6 @@
 # Story 1.6: Move and Reorder Tasks via Drag-and-Drop
 
-**Status:** ready-for-dev
+**Status:** in-progress
 
 **Story ID:** 1.6 | **Epic:** 1 - Foundation & Core Kanban | **Sequence:** 6 of 7
 
@@ -168,7 +168,102 @@ So that I can manage my workflow visually without extra clicks.
   - [ ] Test with page refresh: verify tasks remain in new positions
   - [ ] Verify no console errors or warnings
 
-## Dev Notes
+## Dev Agent Record
+
+### Implementation Plan (AI)
+
+**Date:** 2026-03-12  
+**Agent:** Claude Assistant  
+**Approach:** Red-Green-Refactor (TDD)
+
+**Implementation Summary:**
+
+**Phase 1: Schema & Context Updates (COMPLETE)**
+- ✅ Added `order?: number` field to TaskSchema (validation.ts)
+- ✅ Added `order?: number` field to Task interface (schema.ts)
+- ✅ Updated Dexie tasks store index to include order field
+- ✅ Added task order migration logic on app startup to handle existing tasks
+- ✅ Updated createTask method to assign order based on column max order
+- ✅ Added moveTask method to AppContext for cross-column and within-column reordering
+
+**Phase 2: Component Creation (COMPLETE)**
+- ✅ Created `src/hooks/useReducedMotion.ts` - Detects prefers-reduced-motion preference
+- ✅ Created `src/components/DraggableTaskCard.tsx` - Wraps TaskCard with @dnd-kit useSortable
+  - Applies opacity feedback during drag (0.5 opacity when dragging)
+  - Respects prefers-reduced-motion for animations
+  - Includes aria-label and aria-pressed for accessibility
+  - data-testid for test identification
+  
+- ✅ Created `src/components/SortableColumn.tsx` - Drop zone for tasks within column
+  - Wraps tasks in SortableContext with vertical strategy
+  - Shows visual feedback on drop zone (blue highlight when isOver=true)
+  - Sorts tasks by order field
+  - Renders empty state with add task button
+
+**Phase 3: Integration Updates (COMPLETE)**
+- ✅ Updated `src/components/ColumnHeader.tsx`
+  - Added nested DndContext for task drag-and-drop
+  - Integrated SortableColumn component
+  - Handles task drag-end events and calls moveTask
+  
+- ✅ Updated `src/components/KanbanBoard.tsx`
+  - Enhanced to handle both column reordering and task moving
+  - Added PointerSensor in addition to Mouse/Touch/Keyboard sensors
+  - Added error state UI for failed task moves
+  - Distinguishes between task drag and column drag in handleDragEnd
+  
+- ✅ Updated `src/components/ColumnContent.tsx`
+  - Added sorting by order field: `sort((a, b) => (a.order ?? 0) - (b.order ?? 0))`
+
+- ✅ Updated `src/context/AppContext.tsx`
+  - Enhanced initialization to migrate existing tasks with order values
+  - Groups tasks by column and assigns order by creation date
+  - Added moveTask method with support for:
+    - Cross-column moves (updates columnId and order, shifts other tasks)
+    - Within-column reordering (shifts affected tasks up/down)
+    - Error handling with try/catch and user-friendly messages
+
+**Testing Status:**
+- E2E tests running (currently executing across Chromium, Firefox, WebKit, Mobile Chrome)
+- Component tests available at: tests/component/drag-and-drop.spec.ts
+- E2E tests available at: tests/e2e/drag-and-drop.spec.ts
+
+### Known Limitations & Notes
+
+1. **Nested DndContexts**: Using separate DndContexts for columns (horizontal) and tasks (vertical) within each column to support simultaneous column reordering and task drag-and-drop
+
+2. **Order Assignment Logic**: 
+   - New tasks get order = max(existing orders) + 1
+   - Existing tasks without order are migrated on app startup
+   - Order values are integers starting from 0
+
+3. **Error Recovery**: Task moves are wrapped in try/catch; on failure, error message is shown and tasks are reloaded from Dexie to maintain consistency
+
+4. **Performance**: Using sortable key IDs strategy with vertical list strategy for smooth animations
+
+### Files Modified
+
+- ✅ src/db/validation.ts - Added order field to TaskSchema
+- ✅ src/db/schema.ts - Added order field to Task interface, updated Dexie index
+- ✅ src/context/AppContext.tsx - Added moveTask method, migration logic
+- ✅ src/components/KanbanBoard.tsx - Enhanced with task move handling
+- ✅ src/components/ColumnHeader.tsx - Added nested DndContext and SortableColumn
+- ✅ src/components/ColumnContent.tsx - Sort tasks by order field
+
+### Files Created
+
+- ✅ src/hooks/useReducedMotion.ts - Accessibility hook for motion preferences
+- ✅ src/components/DraggableTaskCard.tsx - @dnd-kit wrapped task card
+- ✅ src/components/SortableColumn.tsx - Column drop zone component
+
+### Build Status
+
+- ✅ TypeScript compilation: SUCCESS
+- ✅ Vite build: SUCCESS (dist output generated)
+- ✅ No console errors or warnings on build
+- ✅ Dev server: RUNNING
+
+## Dev Notes (Updated)
 
 ### Relevant Architecture Patterns and Constraints
 
@@ -1165,16 +1260,24 @@ This story is **complete** when:
 
 ---
 
-**Status:** ready-for-dev
+**Status:** in-progress
 
-**Prepared by:** Ultimate Story Context Engine  
-**Analysis Completed:** 2026-03-11  
+**Prepared by:** AI Development Agent + Ultimate Story Context Engine  
+**Implementation Started:** 2026-03-12  
 **Story ID:** 1.6  
 **Epic:** 1 - Foundation & Core Kanban  
 **Estimated Effort:** 160-200 minutes  
 **Story Sequence:** 6 of 7 in Epic 1  
 **Blocks:** Story 1.7  
 **Blocked By:** Story 1.5 (COMPLETE)
+
+**Implementation Checklist:**
+1. ✅ Schema & context updates
+2. ✅ Component creation  (DraggableTaskCard, SortableColumn, useReducedMotion)
+3. ✅ Integration updates (KanbanBoard, ColumnHeader, ColumnContent, AppContext)
+4. ✅ Build verification (TypeScript + Vite)
+5. ⏳ E2E Tests (running across all browsers)
+6. ⏳ Final verification and commit
 
 **Developer Instructions:**
 1. Read this entire story document
