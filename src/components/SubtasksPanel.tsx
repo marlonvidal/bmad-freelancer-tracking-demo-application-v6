@@ -3,6 +3,7 @@ import { useApp } from '@/context/AppContext';
 import type { Task } from '@/db';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { AlertDialog } from '@/components/ui/alert-dialog';
 import { Trash2, Plus } from 'lucide-react';
 
 interface SubtasksPanelProps {
@@ -15,6 +16,7 @@ export default function SubtasksPanel({ task }: SubtasksPanelProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; title: string } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const taskSubtasks = subtasks
@@ -33,10 +35,6 @@ export default function SubtasksPanel({ task }: SubtasksPanelProps) {
     const trimmed = newTitle.trim();
     if (!trimmed) {
       setError('Title is required');
-      return;
-    }
-    if (trimmed.length > 255) {
-      setError('Title must be 255 characters or less');
       return;
     }
     try {
@@ -71,18 +69,26 @@ export default function SubtasksPanel({ task }: SubtasksPanelProps) {
 
   const handleToggle = async (subtaskId: number) => {
     try {
+      setError(null);
       await toggleSubtaskCompletion(subtaskId);
     } catch (err: any) {
       setError(err.message || 'Failed to update subtask. Please try again.');
     }
   };
 
-  const handleDelete = async (subtaskId: number, subtaskTitle: string) => {
-    if (!window.confirm(`Delete subtask "${subtaskTitle}"?`)) return;
+  const handleDeleteRequest = (subtaskId: number, subtaskTitle: string) => {
+    setDeleteTarget({ id: subtaskId, title: subtaskTitle });
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return;
     try {
-      await deleteSubtask(subtaskId);
+      setError(null);
+      await deleteSubtask(deleteTarget.id);
     } catch (err: any) {
       setError(err.message || 'Failed to delete subtask. Please try again.');
+    } finally {
+      setDeleteTarget(null);
     }
   };
 
@@ -139,7 +145,7 @@ export default function SubtasksPanel({ task }: SubtasksPanelProps) {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => handleDelete(subtask.id!, subtask.title)}
+              onClick={() => handleDeleteRequest(subtask.id!, subtask.title)}
               aria-label={`Delete subtask: ${subtask.title}`}
               className="opacity-0 group-hover:opacity-100 focus:opacity-100 h-7 w-7 p-0 transition-opacity"
               data-testid="subtask-delete-btn"
@@ -184,6 +190,17 @@ export default function SubtasksPanel({ task }: SubtasksPanelProps) {
           Add subtask
         </Button>
       )}
+
+      <AlertDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
+        title="Delete this subtask?"
+        description={deleteTarget ? `"${deleteTarget.title}" will be permanently removed.` : undefined}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        onConfirm={handleDeleteConfirm}
+        variant="destructive"
+      />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { useState, useRef, useImperativeHandle, forwardRef } from 'react';
 import { useApp } from '@/context/AppContext';
 import { Input } from '@/components/ui/input';
+import TaskForm from './TaskForm';
 
 export interface QuickAddFieldHandle {
   focus: () => void;
@@ -9,18 +10,23 @@ export interface QuickAddFieldHandle {
 interface QuickAddFieldProps {
   columnId: number;
   onTaskCreated?: () => void;
+  onFocus?: () => void;
 }
 
 const QuickAddField = forwardRef<QuickAddFieldHandle, QuickAddFieldProps>(
-  ({ columnId, onTaskCreated }, ref) => {
+  ({ columnId, onTaskCreated, onFocus }, ref) => {
     const { createTask } = useApp();
     const [value, setValue] = useState('');
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [isExpandOpen, setIsExpandOpen] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
 
     useImperativeHandle(ref, () => ({
-      focus: () => inputRef.current?.focus(),
+      focus: () => {
+        onFocus?.();
+        inputRef.current?.focus();
+      },
     }));
 
     const handleCreate = async () => {
@@ -66,11 +72,15 @@ const QuickAddField = forwardRef<QuickAddFieldHandle, QuickAddFieldProps>(
     };
 
     const handleBlur = () => {
-      // Clear if empty, keep if has content
       if (!value.trim()) {
         setValue('');
         setError(null);
       }
+    };
+
+    const handleExpand = () => {
+      setError(null);
+      setIsExpandOpen(true);
     };
 
     return (
@@ -94,6 +104,7 @@ const QuickAddField = forwardRef<QuickAddFieldHandle, QuickAddFieldProps>(
               if (error) setError(null);
             }}
             onKeyDown={handleKeyDown}
+            onFocus={onFocus}
             onBlur={handleBlur}
             disabled={isLoading}
             maxLength={255}
@@ -103,18 +114,42 @@ const QuickAddField = forwardRef<QuickAddFieldHandle, QuickAddFieldProps>(
           />
           <button
             type="button"
-            onClick={() => inputRef.current?.focus()}
+            onClick={handleCreate}
             aria-label="Quick add task button"
             data-testid="quick-add-btn"
-            className="flex-shrink-0 text-gray-400 hover:text-gray-600 p-1 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            disabled={isLoading}
+            className="flex-shrink-0 text-gray-400 hover:text-gray-600 p-1 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
             tabIndex={-1}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
             </svg>
           </button>
+          <button
+            type="button"
+            onClick={handleExpand}
+            aria-label="Expand to full task form"
+            data-testid="quick-add-expand-btn"
+            className="flex-shrink-0 text-gray-400 hover:text-gray-600 p-1 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            tabIndex={-1}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+            </svg>
+          </button>
         </div>
         <p className="text-xs text-gray-400 mt-0.5 px-1">Enter to add · Esc to cancel</p>
+
+        <TaskForm
+          open={isExpandOpen}
+          onOpenChange={setIsExpandOpen}
+          columnId={columnId}
+          initialData={value.trim() ? { title: value.trim(), columnId, priority: 'Medium', completed: false, createdAt: '', updatedAt: '' } as any : undefined}
+          onTaskSaved={() => {
+            setValue('');
+            onTaskCreated?.();
+          }}
+        />
       </div>
     );
   }

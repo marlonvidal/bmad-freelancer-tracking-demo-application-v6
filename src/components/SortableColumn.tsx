@@ -11,6 +11,7 @@ interface SortableColumnProps {
   tasks: Task[];
   onTaskUpdated?: () => void;
   quickAddRef?: React.Ref<QuickAddFieldHandle>;
+  onQuickAddFocus?: () => void;
 }
 
 export default function SortableColumn({
@@ -18,6 +19,7 @@ export default function SortableColumn({
   tasks,
   onTaskUpdated,
   quickAddRef,
+  onQuickAddFocus,
 }: SortableColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: `column-${column.id}`,
@@ -34,7 +36,7 @@ export default function SortableColumn({
       className={`flex-1 bg-gray-50 rounded-lg p-6 min-h-96 transition-colors relative ${
         isOver ? 'bg-blue-50 border-2 border-blue-300' : 'border-2 border-transparent'
       }`}
-      data-testid={`column-${column.id}`}
+      data-testid={`column-drop-zone-${column.id}`}
     >
       {/* Drop Indicator - visible when hovering over empty column */}
       {isOver && sortedTasks.length === 0 && (
@@ -78,6 +80,7 @@ export default function SortableColumn({
         ref={resolvedRef}
         columnId={column.id!}
         onTaskCreated={onTaskUpdated}
+        onFocus={onQuickAddFocus}
       />
     </div>
   );

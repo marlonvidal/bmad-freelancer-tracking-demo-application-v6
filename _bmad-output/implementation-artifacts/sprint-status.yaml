@@ -49,7 +49,7 @@ development_status:
   1-4-create-kanban-board-with-customizable-columns: done
   1-5-create-and-manage-tasks-with-full-fields: done
   1-6-move-and-reorder-tasks-via-drag-and-drop: done
-  1-7-add-subtasks-and-quick-add-for-tasks: review
+  1-7-add-subtasks-and-quick-add-for-tasks: done
   epic-1-retrospective: optional
 
   # Epic 2: Time Tracking

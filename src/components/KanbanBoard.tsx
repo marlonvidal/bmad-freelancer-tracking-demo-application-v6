@@ -174,6 +174,9 @@ export default function KanbanBoard() {
                     quickAddRefs.current.delete(column.id!);
                   }
                 }}
+                onQuickAddFocus={() => {
+                  lastActiveColumnId.current = column.id!;
+                }}
               />
             ))}
           </div>

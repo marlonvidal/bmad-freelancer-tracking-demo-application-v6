@@ -204,13 +204,18 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
   const deleteColumn = async (id: number) => {
     try {
-      // First, delete all tasks in this column to avoid orphaned data
+      // First, cascade-delete all subtasks belonging to tasks in this column
       const tasksInColumn = await db.tasks.where('columnId').equals(id).toArray();
-      await Promise.all(tasksInColumn.map(t => db.tasks.delete(t.id!)));
-      
-      // Remove tasks from state
+      const taskIds = tasksInColumn.map(t => t.id!);
+      await Promise.all(taskIds.map(taskId => db.subtasks.where('taskId').equals(taskId).delete()));
+
+      // Then delete all tasks in this column
+      await Promise.all(taskIds.map(taskId => db.tasks.delete(taskId)));
+
+      // Remove tasks and their subtasks from state
+      setSubtasks(prev => prev.filter(s => !taskIds.includes(s.taskId)));
       setTasks(tasks.filter(t => t.columnId !== id));
-      
+
       // Then delete the column
       await db.columns.delete(id);
       setColumns(columns.filter(c => c.id !== id));

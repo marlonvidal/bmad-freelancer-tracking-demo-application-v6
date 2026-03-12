@@ -1,6 +1,6 @@
 # Story 1.7: Add Subtasks and Quick-Add for Tasks
 
-**Status:** in-progress
+**Status:** done
 
 **Story ID:** 1.7 | **Epic:** 1 - Foundation & Core Kanban | **Sequence:** 7 of 7
 
@@ -1203,35 +1203,45 @@ This story is **complete** when:
 - ✅ Subtask schema uses Zod with required title (min 1, max 255) and foreign key taskId
 - ✅ Dexie upgraded to version 2 with `subtasks: '++id, taskId, order'` for efficient queries
 - ✅ Cascade delete: deleting a task removes its subtasks from Dexie and state
+- ✅ Cascade delete: deleting a column now also removes all subtasks belonging to its tasks
 - ✅ Quick-add keyboard shortcut (Cmd+Shift+N / Ctrl+Shift+N) registered globally
+- ✅ Keyboard shortcut always focuses the last active column's quick-add field
 - ✅ ATDD test infrastructure updated for correct DB name/version
 - ✅ All e2e tests remain in RED phase (test.skip()) per ATDD process
 - ✅ Task card is now clickable (opens edit/detail panel)
+- ✅ Code review fixes applied (2026-03-12): H1–H4 and M1–M5
+
+### Review Follow-ups (AI)
+- [ ] [AI-Review][LOW] L1: Export Subtask type from `src/schemas/subtask.ts` to create a single source of truth with the Dexie interface
+- [ ] [AI-Review][LOW] L2: Replace deprecated `navigator.platform` with `navigator.userAgent` in `useKeyboardShortcut.ts` (already fixed to userAgent in this review)
+- [ ] [AI-Review][LOW] L3: Reset `TaskForm` formData when `initialData` prop changes (pre-existing issue from Story 1.5)
 
 ### File List
 - `src/db/schema.ts` — MODIFIED: Added Subtask interface, upgraded to version 2 with subtasks store
 - `src/db/index.ts` — MODIFIED: Exported Subtask type
 - `src/schemas/subtask.ts` — NEW: Zod validation schema for subtasks
-- `src/context/AppContext.tsx` — MODIFIED: Added subtasks state, addSubtask/deleteSubtask/toggleSubtaskCompletion/updateSubtaskOrder methods, cascade delete
-- `src/components/SubtasksPanel.tsx` — NEW: Subtask management panel for task detail
+- `src/context/AppContext.tsx` — MODIFIED: Added subtasks state, addSubtask/deleteSubtask/toggleSubtaskCompletion/updateSubtaskOrder methods, cascade delete on task and column deletion
+- `src/components/SubtasksPanel.tsx` — NEW: Subtask management panel with AlertDialog for delete confirmation
 - `src/components/TaskSummary.tsx` — NEW: Compact subtask count badge for task card
-- `src/components/QuickAddField.tsx` — NEW: Inline quick task creation field
-- `src/hooks/useKeyboardShortcut.ts` — NEW: Global keyboard shortcut hook
+- `src/components/QuickAddField.tsx` — NEW: Inline quick task creation field with expand button (quick-add-expand-btn) and working "+" submit button
+- `src/hooks/useKeyboardShortcut.ts` — NEW: Global keyboard shortcut hook (fixed modifier logic, replaced navigator.platform)
+- `src/components/ui/alert-dialog.tsx` — NEW: Accessible AlertDialog component for confirmation dialogs
 - `src/components/TaskCard.tsx` — MODIFIED: Added TaskSummary, clickable card, data-testid
-- `src/components/SortableColumn.tsx` — MODIFIED: Added QuickAddField, removed old "Add task" button
+- `src/components/SortableColumn.tsx` — MODIFIED: Added QuickAddField, fixed duplicate data-testid (now column-drop-zone-{id})
 - `src/components/TaskForm.tsx` — MODIFIED: Added SubtasksPanel (edit mode), data-testid on dialog
-- `src/components/KanbanBoard.tsx` — MODIFIED: Wired keyboard shortcut, quickAddRefs map
-- `src/components/ColumnHeader.tsx` — MODIFIED: Accepts and passes quickAddRef to SortableColumn
+- `src/components/KanbanBoard.tsx` — MODIFIED: Wired keyboard shortcut, quickAddRefs map, lastActiveColumnId updates on focus
+- `src/components/ColumnHeader.tsx` — MODIFIED: Accepts and passes quickAddRef and onQuickAddFocus to SortableColumn
 - `tests/support/helpers/local-storage.ts` — MODIFIED: Updated DB name/version for subtasks seeding
 - `_bmad-output/implementation-artifacts/1-7-add-subtasks-and-quick-add-for-tasks.md` — MODIFIED: Story file updates
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` — MODIFIED: Status updated
 
 ### Change Log
 - 2026-03-12: Story 1.7 implemented — Subtasks and Quick-Add for Tasks. Added Dexie subtasks store, AppContext subtask methods, SubtasksPanel, TaskSummary, QuickAddField, useKeyboardShortcut, keyboard shortcut (Cmd/Ctrl+Shift+N). Task cards are now clickable to open detail/edit panel. All ATDD test infrastructure prepared.
+- 2026-03-12: Code review fixes — H1: deleteColumn now cascade-deletes subtasks. H2: useKeyboardShortcut modifier logic fixed + navigator.platform → userAgent. H3: QuickAddField gains expand button (data-testid="quick-add-expand-btn") opening TaskForm. H4: SubtasksPanel replaces window.confirm with AlertDialog. M1: Removed dead length check. M2: SortableColumn data-testid changed to column-drop-zone-{id}. M3: "+" button now calls handleCreate. M4: lastActiveColumnId updated on QuickAddField focus. M5: setError(null) on successful toggle.
 
 ---
 
-**Status:** review
+**Status:** done
 
 **Prepared by:** Ultimate Story Context Engine  
 **Analysis Completed:** 2026-03-11  

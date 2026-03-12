@@ -16,18 +16,23 @@ export function useKeyboardShortcut(
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      const isMac = /Mac|iPhone|iPad|iPod/.test(navigator.platform);
+      const isMac = /Mac|iPhone|iPad|iPod/.test(navigator.userAgent);
       const primaryModifier = isMac ? e.metaKey : e.ctrlKey;
 
-      const cmdOrCtrlMatch = options.cmdOrCtrl ? primaryModifier : true;
-      const shiftMatch = options.shift ? e.shiftKey : !e.shiftKey;
-      const ctrlMatch = options.ctrl ? e.ctrlKey : true;
       const keyMatch = e.key.toUpperCase() === key.toUpperCase();
 
-      // When cmdOrCtrl is set, don't also require separate ctrl check
-      const modifiersMatch = options.cmdOrCtrl
-        ? cmdOrCtrlMatch && (options.shift ? e.shiftKey : !e.shiftKey)
-        : ctrlMatch && shiftMatch;
+      let modifiersMatch: boolean;
+      if (options.cmdOrCtrl) {
+        // Require the platform's primary modifier (Cmd on Mac, Ctrl on Win/Linux)
+        const cmdOrCtrlMatch = primaryModifier;
+        const shiftMatch = options.shift ? e.shiftKey : !e.shiftKey;
+        modifiersMatch = cmdOrCtrlMatch && shiftMatch;
+      } else {
+        // Explicit ctrl/shift flags — each must match exactly
+        const ctrlMatch = options.ctrl ? e.ctrlKey : !e.ctrlKey;
+        const shiftMatch = options.shift ? e.shiftKey : !e.shiftKey;
+        modifiersMatch = ctrlMatch && shiftMatch;
+      }
 
       if (keyMatch && modifiersMatch) {
         e.preventDefault();

@@ -22,9 +22,10 @@ import { Trash2 } from 'lucide-react';
 interface ColumnHeaderProps {
   column: Column;
   quickAddRef?: React.Ref<QuickAddFieldHandle>;
+  onQuickAddFocus?: () => void;
 }
 
-export default function ColumnHeader({ column, quickAddRef }: ColumnHeaderProps) {
+export default function ColumnHeader({ column, quickAddRef, onQuickAddFocus }: ColumnHeaderProps) {
   const { deleteColumn, updateColumn, tasks, moveTask } = useApp();
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(column.name);
@@ -201,6 +202,7 @@ export default function ColumnHeader({ column, quickAddRef }: ColumnHeaderProps)
             tasks={columnTasks}
             onTaskUpdated={() => {}}
             quickAddRef={quickAddRef}
+            onQuickAddFocus={onQuickAddFocus}
           />
         </DndContext>
       </div>
