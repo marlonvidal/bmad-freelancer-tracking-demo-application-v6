@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import type { Column } from '@/db';
-import TaskCard from './TaskCard';
+import DraggableTaskCard from './DraggableTaskCard';
 import TaskForm from './TaskForm';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
@@ -50,7 +50,7 @@ export default function ColumnContent({ column }: ColumnContentProps) {
   return (
     <div>
       {columnTasks.map((task) => (
-        <TaskCard key={task.id} task={task} onTaskUpdated={() => {}} />
+        <DraggableTaskCard key={task.id} task={task} onTaskUpdated={() => {}} />
       ))}
       <Button
         variant="ghost"

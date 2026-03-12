@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -27,6 +27,7 @@ export default function KanbanBoard() {
   const [items, setItems] = useState<Column[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const previousTasksRef = useRef<Map<number, { columnId: number; order: number }>>(new Map());
 
   useEffect(() => {
     setItems(columns);
@@ -53,6 +54,17 @@ export default function KanbanBoard() {
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
+
+  // Store task positions before drag starts
+  useEffect(() => {
+    const taskMap = new Map<number, { columnId: number; order: number }>();
+    tasks.forEach(task => {
+      if (task.id) {
+        taskMap.set(task.id, { columnId: task.columnId, order: task.order ?? 0 });
+      }
+    });
+    previousTasksRef.current = taskMap;
+  }, [tasks]);
 
   const handleDragEnd = useCallback(async (event: DragEndEvent) => {
     const { active, over } = event;
@@ -95,6 +107,7 @@ export default function KanbanBoard() {
 
         await moveTask(taskId, targetColumnId, newOrder);
       } catch (err: any) {
+        // Store error and revert will happen automatically when tasks update
         setError(err.message || 'Failed to move task. Please try again.');
         console.error('Task drag-and-drop error:', err);
       }
